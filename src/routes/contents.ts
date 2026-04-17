@@ -10,12 +10,14 @@ type ContentRow = RowDataPacket & {
 }
 
 const contents: FastifyPluginAsync = async (fastify): Promise<void> => {
-	fastify.get('/contents', async function (_request, reply): Promise<ContentRow[] | never> {
+	fastify.get('/contents', async function (_request, reply): Promise<{ data: ContentRow[] } | never> {
 		try {
+			let ret = { data: [] as ContentRow[] }
 			const [rows] = await fastify.mysql.query<ContentRow[]>(
 				'SELECT id, name, name_en, created_at, updated_at FROM mathlearning_contents ORDER BY id ASC'
 			)
-			return rows
+			ret.data = rows
+			return ret
 		} catch (err) {
 			fastify.log.error({ err }, 'query mathlearning_contents failed')
 			return reply.internalServerError('query contents failed') as never
