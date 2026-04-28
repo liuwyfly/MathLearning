@@ -5,8 +5,6 @@ type ContentRow = RowDataPacket & {
 	id: number
 	name: string
 	name_en: string
-	created_at: string
-	updated_at: string
 }
 
 const contents: FastifyPluginAsync = async (fastify): Promise<void> => {
@@ -14,7 +12,7 @@ const contents: FastifyPluginAsync = async (fastify): Promise<void> => {
 		try {
 			let ret = { data: [] as ContentRow[] }
 			const [rows] = await fastify.mysql.query<ContentRow[]>(
-				'SELECT id, name, name_en, created_at, updated_at FROM mathlearning_contents ORDER BY id ASC'
+				'SELECT id, name, name_en FROM mathlearning_contents ORDER BY id ASC'
 			)
 			ret.data = rows
 			return ret
