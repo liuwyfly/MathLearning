@@ -1,29 +1,13 @@
 import { type MultipartFile } from '@fastify/multipart'
 import { type FastifyPluginAsync, type FastifyRequest } from 'fastify'
+import { type MultipartField } from '../../../common/multipart'
+import { ParsePositiveIntegerField, ParsePositiveNumberField } from '../../../common/validation'
 
 type MarkdownUploadPayload = {
   articleId: number
   sort: number
   filename: string
   fileBuffer: Buffer
-}
-
-type MultipartField = {
-  fieldname: string
-  value: unknown
-}
-
-function parsePositiveIntegerField (value: unknown): number | null {
-  if (typeof value !== 'string' || value.trim() === '') {
-    return null
-  }
-
-  const parsed = Number(value)
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    return null
-  }
-
-  return parsed
 }
 
 async function parseMarkdownUpload (request: FastifyRequest): Promise<MarkdownUploadPayload | { errorMessage: string }> {
@@ -54,14 +38,14 @@ async function parseMarkdownUpload (request: FastifyRequest): Promise<MarkdownUp
     }
   }
 
-  const articleId = parsePositiveIntegerField(articleIdRaw)
+  const articleId = ParsePositiveIntegerField(articleIdRaw)
   if (articleId == null) {
     return { errorMessage: 'article_id must be a positive integer' }
   }
 
-  const sort = parsePositiveIntegerField(sortRaw)
+  const sort = ParsePositiveNumberField(sortRaw)
   if (sort == null) {
-    return { errorMessage: 'sort must be a positive integer' }
+    return { errorMessage: 'sort must be a positive number' }
   }
 
   if (fileBuffer == null) {
