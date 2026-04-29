@@ -1,7 +1,16 @@
 import { type MultipartFile } from '@fastify/multipart'
-import { type FastifyPluginAsync, type FastifyRequest } from 'fastify'
+import { type FastifyInstance, type FastifyPluginAsync, type FastifyRequest } from 'fastify'
 import { type MultipartField } from '../../../common/multipart'
 import { ParsePositiveIntegerField, ParsePositiveNumberField } from '../../../common/validation'
+import OSS from 'ali-oss'
+
+const client = new OSS({
+  region: process.env.OSS_REGION,  // 'oss-cn-wulanchabu',
+  accessKeyId: process.env.OSS_ACCESS_KEY_ID ?? '',
+  accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET ?? '',
+  authorizationV4: true,
+  bucket: 'turbo2016',
+})
 
 type MarkdownUploadPayload = {
   articleId: number
@@ -10,7 +19,7 @@ type MarkdownUploadPayload = {
   fileBuffer: Buffer
 }
 
-async function parseMarkdownUpload (request: FastifyRequest): Promise<MarkdownUploadPayload | { errorMessage: string }> {
+async function parseMarkdownUpload (fastify: FastifyInstance, request: FastifyRequest, basePath: string): Promise<MarkdownUploadPayload | { errorMessage: string }> {
   let articleIdRaw: unknown
   let sortRaw: unknown
   let filename: string | undefined
@@ -56,11 +65,32 @@ async function parseMarkdownUpload (request: FastifyRequest): Promise<MarkdownUp
     return { errorMessage: 'file filename is required' }
   }
 
-  return {
+  let ret = {
     articleId,
     sort,
     filename,
     fileBuffer
+  }
+  // return ret
+  
+  try {
+    // 2. 将路径和文件名拼接起来
+    // 注意：这里使用了 basePath + filename
+    // 如果 OSS 中已经存在同名文件，会被直接覆盖
+    const objectKey = basePath + filename;
+    fastify.log.info({ articleId, sort, objectKey }, 'parsed markdown upload payload')
+
+    const result = await client.put(objectKey, fileBuffer, {
+      headers: {
+          'Content-Type': 'text/markdown; charset=utf-8'
+      }
+    })
+
+    fastify.log.info({ result }, 'markdown file uploaded to OSS successfully')
+    return ret
+  } catch (err) {
+    fastify.log.error({ err }, 'upload markdown to oss failed')
+    return { errorMessage: 'upload markdown to oss failed' }
   }
 }
 
@@ -79,8 +109,11 @@ const markdown: FastifyPluginAsync = async (fastify): Promise<void> => {
       })
     }
 
+    // 1. 定义你的基础路径
+    const basePath = '/mathlearning/junior_high_sch/';
+
     try {
-      const upload = await parseMarkdownUpload(request)
+      const upload = await parseMarkdownUpload(fastify, request, basePath)
       if ('errorMessage' in upload) {
         return reply.badRequest(upload.errorMessage)
       }
