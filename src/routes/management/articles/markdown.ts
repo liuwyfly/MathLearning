@@ -5,7 +5,7 @@ import { ParsePositiveIntegerField, ParsePositiveNumberField } from '../../../co
 import OSS from 'ali-oss'
 
 const client = new OSS({
-  region: process.env.OSS_REGION,  // 'oss-cn-wulanchabu',
+  region: process.env.OSS_REGION,  // 外网 'oss-cn-wulanchabu',
   accessKeyId: process.env.OSS_ACCESS_KEY_ID ?? '',
   accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET ?? '',
   authorizationV4: true,
