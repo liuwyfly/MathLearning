@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma-client"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model mathlearning_article {
+  id                            Int                             @id @default(autoincrement()) @db.UnsignedInt
+  title                         String                          @db.VarChar(256)
+  title_en                      String?                         @db.VarChar(384)
+  created_at                    DateTime                        @default(now()) @db.DateTime(0)
+  updated_at                    DateTime                        @default(now()) @db.DateTime(0)
+  mathlearning_contents_article mathlearning_contents_article[]
+}
+
+model mathlearning_contents {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  name       String   @db.VarChar(256)
+  name_en    String?  @db.VarChar(256)
+  created_at DateTime @default(now()) @db.DateTime(0)
+  updated_at DateTime @default(now()) @db.DateTime(0)
+}
+
+model mathlearning_contents_article {
+  id                   Int                  @id @default(autoincrement()) @db.UnsignedInt
+  content_id           Int                  @db.UnsignedInt
+  article_id           Int                  @db.UnsignedInt
+  created_at           DateTime             @default(now()) @db.DateTime(0)
+  mathlearning_article mathlearning_article @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_article_id")
+
+  @@unique([content_id, article_id], map: "uk_content_article")
+  @@index([article_id], map: "fk_article_id")
+}

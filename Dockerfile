@@ -55,4 +55,7 @@ ENV NODE_ENV=production
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000' + (process.env.FASTIFY_ROUTE_PREFIX || '') + '/ping', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
+# Prisma ORM env value
+ENV DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?connection_limit=3&pool_timeout=30&connect_timeout=10
+
 CMD ["sh", "-c", "exec npx fastify start -l \"${FASTIFY_LOG_LEVEL:-info}\" dist/app.js"]

@@ -1,8 +1,12 @@
 {
   "extends": "fastify-tsconfig",
   "compilerOptions": {
+    "rootDir": "src",
     "outDir": "dist",
-    "sourceMap": true
+    "sourceMap": true,
+    "paths": {
+      "@prisma/client": ["./src/generated/prisma-client"]
+    }
   },
   "include": ["src/**/*.ts"]
 }

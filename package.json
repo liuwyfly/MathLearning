@@ -9,10 +9,16 @@
   "scripts": {
     "test": "npm run build:ts && tsc -p test/tsconfig.json && c8 node --test -r ts-node/register \"test/**/*.ts\"",
     "start": "npm run build:ts && fastify start -l info dist/app.js",
-    "build:ts": "tsc",
+    "build:ts": "tsc && node -e \"require('fs').cpSync('src/generated/prisma-client', 'dist/generated/prisma-client', {recursive: true, force: true})\"",
     "watch:ts": "tsc -w",
     "dev": "npm run build:ts && concurrently -k -p \"[{name}]\" -n \"TypeScript,App\" -c \"yellow.bold,cyan.bold\" \"npm:watch:ts\" \"npm:dev:start\"",
-    "dev:start": "fastify start --ignore-watch=.ts$ -w -l info -P dist/app.js"
+    "dev:start": "fastify start --ignore-watch=.ts$ -w -l info -P dist/app.js",
+    "prisma:generate": "prisma generate",
+    "prisma:db:pull": "prisma db pull",
+    "prisma:db:push": "prisma db push",
+    "prisma:migrate:dev": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +29,8 @@
     "@fastify/multipart": "^6.0.0",
     "@fastify/mysql": "^5.0.2",
     "@fastify/sensible": "^6.0.0",
+    "@prisma/adapter-mariadb": "^7.8.0",
+    "@prisma/client": "^7.8.0",
     "@types/ali-oss": "^6.23.3",
     "ali-oss": "^6.23.0",
     "fastify": "^5.0.0",
@@ -35,6 +43,7 @@
     "c8": "^11.0.0",
     "concurrently": "^9.0.0",
     "fastify-tsconfig": "^3.0.0",
+    "prisma": "^7.8.0",
     "ts-node": "^10.4.0",
     "typescript": "~5.9.2"
   }

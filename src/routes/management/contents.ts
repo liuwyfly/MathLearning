@@ -9,6 +9,14 @@ type ContentRow = RowDataPacket & {
   updated_at: string
 }
 
+type ContentRowFromPrisma = {
+  id: number
+  name: string
+  name_en: string | null
+  created_at: Date
+  updated_at: Date
+}
+
 type ContentParams = {
   id: string
 }
@@ -19,7 +27,7 @@ type ContentBody = {
 }
 
 type ContentListResponse = {
-  data: ContentRow[]
+  data: ContentRowFromPrisma[]
 }
 
 function parseContentId (id: string): number | null {
@@ -45,14 +53,12 @@ function normalizeNameEn (nameEn: unknown): string | null {
 
 const managementContents: FastifyPluginAsync = async (fastify): Promise<void> => {
   fastify.get('/contents', async function (_request, reply): Promise<ContentListResponse | never> {
-    const ret: ContentListResponse = { data: [] }
     try {
-      const [rows] = await fastify.mysql.query<ContentRow[]>(
-        'SELECT id, name, name_en, created_at, updated_at FROM mathlearning_contents ORDER BY id ASC'
-      )
+      const rows = await fastify.prisma.mathlearning_contents.findMany({
+        orderBy: { id: 'asc' }
+      })
 
-      ret.data = rows
-      return ret
+      return { data: rows }
     } catch (err) {
       fastify.log.error({ err }, 'query mathlearning_contents list failed')
       return reply.internalServerError('query contents failed') as never
