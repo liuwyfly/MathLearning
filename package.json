@@ -26,7 +26,7 @@
   "dependencies": {
     "@fastify/autoload": "^6.0.0",
     "@fastify/jwt": "^10.0.0",
-    "@fastify/multipart": "^6.0.0",
+    "@fastify/multipart": "^10.0.0",
     "@fastify/mysql": "^5.0.2",
     "@fastify/sensible": "^6.0.0",
     "@prisma/adapter-mariadb": "^7.8.0",
