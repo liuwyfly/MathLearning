@@ -24,10 +24,13 @@
     output   = "../src/generated/prisma-client"
   }
  *
+ * pakcage.josn build
+ * "build:ts": "tsc && node -e \"require('fs').cpSync('src/generated/prisma-client', 'dist/generated/prisma-client', {recursive: true, force: true})\"",
+
  */
 
 import fp from 'fastify-plugin'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '../generated/prisma-client'
 import { PrismaMariaDb } from '@prisma/adapter-mariadb'
 import type { FastifyPluginAsync } from 'fastify'
 

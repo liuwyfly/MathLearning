@@ -4,19 +4,12 @@ import { type MultipartField } from '../../../common/multipart'
 import { ParsePositiveIntegerField, ParsePositiveNumberField } from '../../../common/validation'
 import OSS from 'ali-oss'
 
-const client = new OSS({
-	region: process.env.OSS_REGION,  // 外网 'oss-cn-wulanchabu',
-	accessKeyId: process.env.OSS_ACCESS_KEY_ID ?? '',
-	accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET ?? '',
-	authorizationV4: true,
-	bucket: 'turbo2016',
-})
-
 type MarkdownUploadPayload = {
 	articleId: number
 	sort: number
 	filename: string
-	fileBuffer: Buffer
+	fileBuffer: Buffer,
+	result: unknown
 }
 
 async function parseMarkdownUpload (fastify: FastifyInstance, request: FastifyRequest, basePath: string): Promise<MarkdownUploadPayload | { errorMessage: string }> {
@@ -65,16 +58,16 @@ async function parseMarkdownUpload (fastify: FastifyInstance, request: FastifyRe
 		return { errorMessage: 'file filename is required' }
 	}
 
-	let ret = {
-		articleId,
-		sort,
-		filename,
-		fileBuffer
-	}
-	// return ret
-
 	try {
-		// 2. 将路径和文件名拼接起来
+		const client = new OSS({
+			region: process.env.OSS_REGION,  // 外网 'oss-cn-wulanchabu',
+			accessKeyId: process.env.OSS_ACCESS_KEY_ID ?? '',
+			accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET ?? '',
+			authorizationV4: true,
+			bucket: 'turbo2016',
+		})
+
+		// 将路径和文件名拼接起来
 		// 注意：这里使用了 basePath + filename
 		// 如果 OSS 中已经存在同名文件，会被直接覆盖
 		const objectKey = basePath + filename;
@@ -87,6 +80,14 @@ async function parseMarkdownUpload (fastify: FastifyInstance, request: FastifyRe
 		})
 
 		fastify.log.info({ result }, 'markdown file uploaded to OSS successfully')
+		
+		let ret: MarkdownUploadPayload = {
+			articleId,
+			sort,
+			filename,
+			fileBuffer,
+			result
+		}
 		return ret
 	} catch (err) {
 		fastify.log.error({ err }, 'upload markdown to oss failed')
@@ -127,7 +128,8 @@ export const PostMarkdown = async function (this: FastifyInstance, request: Fast
 			article_id: upload.articleId,
 			sort: upload.sort,
 			filename: upload.filename,
-			size: upload.fileBuffer.length
+			size: upload.fileBuffer.length,
+			result: upload.result
 		})
 	} catch (err) {
 		this.log.error({ err }, 'parse markdown upload failed')

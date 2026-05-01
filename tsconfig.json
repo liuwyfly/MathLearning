@@ -5,7 +5,7 @@
     "outDir": "dist",
     "sourceMap": true,
     "paths": {
-      // "@prisma/client": ["./src/generated/prisma-client"]
+      "@prisma/client": ["./src/generated/prisma-client"]
     }
   },
   "include": ["src/**/*.ts"]

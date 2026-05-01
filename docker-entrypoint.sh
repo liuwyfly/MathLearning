@@ -35,4 +35,12 @@ for var in $(env | grep '_FILE=' | cut -d= -f1); do
   fi
 done
 
+# DATABASE_URL for Prisma ORM
+if [ -z "$DATABASE_URL" ] && [ -n "$MYSQL_USER" ] && [ -n "$MYSQL_PASSWORD" ] && [ -n "$MYSQL_HOST" ] && [ -n "$MYSQL_PORT" ] && [ -n "$MYSQL_DATABASE" ]; then
+  export DATABASE_URL="mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?connection_limit=3&pool_timeout=30&connect_timeout=10"
+  if [ -n "$DEBUG" ]; then
+    echo "[entrypoint] DATABASE_URL set from MYSQL_* envs"
+  fi
+fi
+
 exec "$@"
