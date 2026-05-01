@@ -1,10 +1,9 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import { type RowDataPacket } from 'mysql2/promise'
 
-export type ContentRow = RowDataPacket & {
+export type ContentRow = {
 	id: number
 	name: string
-	name_en: string
+	name_en: string | null
 }
 
 
@@ -13,12 +12,11 @@ export type ContentRow = RowDataPacket & {
 
 export const GetContents = async function (this: FastifyInstance, _request: FastifyRequest, reply: FastifyReply): Promise<{ data: ContentRow[] } | never> {
 	try {
-		let ret = { data: [] as ContentRow[] }
-		const [rows] = await this.mysql.query<ContentRow[]>(
-			'SELECT id, name, name_en FROM mathlearning_contents ORDER BY id ASC'
-		)
-		ret.data = rows
-		return ret
+		const rows = await this.prisma.mathlearning_contents.findMany({
+			orderBy: { id: 'asc' },
+			select: { id: true, name: true, name_en: true }
+		})
+		return { data: rows }
 	} catch (err) {
 		this.log.error({ err }, 'query mathlearning_contents failed')
 		return reply.internalServerError('query contents failed') as never

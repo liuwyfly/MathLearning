@@ -1,15 +1,6 @@
 import { type FastifyPluginAsync } from 'fastify'
-import { type ResultSetHeader, type RowDataPacket } from 'mysql2/promise'
 
-type ContentRow = RowDataPacket & {
-  id: number
-  name: string
-  name_en: string | null
-  created_at: string
-  updated_at: string
-}
-
-type ContentRowFromPrisma = {
+type ContentRow = {
   id: number
   name: string
   name_en: string | null
@@ -27,7 +18,7 @@ type ContentBody = {
 }
 
 type ContentListResponse = {
-  data: ContentRowFromPrisma[]
+  data: ContentRow[]
 }
 
 function parseContentId (id: string): number | null {
@@ -72,12 +63,10 @@ const managementContents: FastifyPluginAsync = async (fastify): Promise<void> =>
     }
 
     try {
-      const [rows] = await fastify.mysql.query<ContentRow[]>(
-        'SELECT id, name, name_en, created_at, updated_at FROM mathlearning_contents WHERE id = ? LIMIT 1',
-        [id]
-      )
+      const row = await fastify.prisma.mathlearning_contents.findUnique({
+        where: { id }
+      })
 
-      const row = rows[0]
       if (row == null) {
         return reply.notFound('content not found') as never
       }
@@ -108,20 +97,12 @@ const managementContents: FastifyPluginAsync = async (fastify): Promise<void> =>
     const normalizedNameEn = normalizeNameEn(nameEnRaw)
 
     try {
-      const [insertResult] = await fastify.mysql.execute<ResultSetHeader>(
-        'INSERT INTO mathlearning_contents (name, name_en) VALUES (?, ?)',
-        [normalizedName, normalizedNameEn]
-      )
-
-      const [rows] = await fastify.mysql.query<ContentRow[]>(
-        'SELECT id, name, name_en, created_at, updated_at FROM mathlearning_contents WHERE id = ? LIMIT 1',
-        [insertResult.insertId]
-      )
-
-      const createdRow = rows[0]
-      if (createdRow == null) {
-        return reply.internalServerError('query created content failed') as never
-      }
+      const createdRow = await fastify.prisma.mathlearning_contents.create({
+        data: {
+          name: normalizedName,
+          name_en: normalizedNameEn
+        }
+      })
 
       reply.code(201)
       return createdRow
@@ -150,21 +131,22 @@ const managementContents: FastifyPluginAsync = async (fastify): Promise<void> =>
     const normalizedNameEn = normalizeNameEn(nameEnRaw)
 
     try {
-      const [updateResult] = await fastify.mysql.execute<ResultSetHeader>(
-        'UPDATE mathlearning_contents SET name = ?, name_en = ? WHERE id = ?',
-        [normalizedName, normalizedNameEn, id]
-      )
+      const updateResult = await fastify.prisma.mathlearning_contents.updateMany({
+        where: { id },
+        data: {
+          name: normalizedName,
+          name_en: normalizedNameEn
+        }
+      })
 
-      if (updateResult.affectedRows === 0) {
+      if (updateResult.count === 0) {
         return reply.notFound('content not found') as never
       }
 
-      const [rows] = await fastify.mysql.query<ContentRow[]>(
-        'SELECT id, name, name_en, created_at, updated_at FROM mathlearning_contents WHERE id = ? LIMIT 1',
-        [id]
-      )
+      const updatedRow = await fastify.prisma.mathlearning_contents.findUnique({
+        where: { id }
+      })
 
-      const updatedRow = rows[0]
       if (updatedRow == null) {
         return reply.internalServerError('query updated content failed') as never
       }
@@ -183,12 +165,11 @@ const managementContents: FastifyPluginAsync = async (fastify): Promise<void> =>
     }
 
     try {
-      const [deleteResult] = await fastify.mysql.execute<ResultSetHeader>(
-        'DELETE FROM mathlearning_contents WHERE id = ?',
-        [id]
-      )
+      const deleteResult = await fastify.prisma.mathlearning_contents.deleteMany({
+        where: { id }
+      })
 
-      if (deleteResult.affectedRows === 0) {
+      if (deleteResult.count === 0) {
         return reply.notFound('content not found') as never
       }
 

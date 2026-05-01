@@ -1,3 +1,4 @@
+/*
 import fp from 'fastify-plugin'
 import mysql from '@fastify/mysql'
 import type { Pool as PromisePool } from 'mysql2/promise'
@@ -5,6 +6,7 @@ import type { Pool as PromisePool } from 'mysql2/promise'
 export type MySQLPromisePool = Pick<PromisePool, 'query' | 'execute' | 'getConnection'> & {
   pool: PromisePool
 }
+*/
 
 /*
  * connectionLimit: 3：每个 Fastify 实例最多 3 个连接。
@@ -14,6 +16,7 @@ export type MySQLPromisePool = Pick<PromisePool, 'query' | 'execute' | 'getConne
  * connectTimeout: 10000：数据库异常时 10 秒内失败，避免请求卡太久。
  */
 
+/*
 export default fp(async (fastify) => {
   fastify.register(mysql, {
     promise: true,
@@ -38,3 +41,4 @@ declare module 'fastify' {
     mysql: MySQLPromisePool
   }
 }
+*/
