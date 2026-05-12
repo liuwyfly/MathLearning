@@ -35,28 +35,48 @@ import { PrismaMariaDb } from '@prisma/adapter-mariadb'
 import type { FastifyPluginAsync } from 'fastify'
 
 
-
-// 自定义选项类型
-export interface PrismaPluginOptions {
-  // 可在此扩展插件选项
-}
-
-const prismaPlugin: FastifyPluginAsync<PrismaPluginOptions> = async (fastify, _opts) => {
+const prismaPlugin: FastifyPluginAsync = async (fastify, _opts) => {
   const databaseUrl = process.env.DATABASE_URL
   if (!databaseUrl) {
     throw new Error('DATABASE_URL is required to initialize Prisma adapter')
   }
+
+  const connectTimeoutMs = Number(process.env.PRISMA_CONNECT_TIMEOUT_MS ?? 8000)
 
   const adapter = new PrismaMariaDb(databaseUrl)
 
   const prisma = new PrismaClient({
     adapter,
     log: process.env.NODE_ENV === 'development'
-      ? ['query', 'info', 'warn', 'error']
+      ? [
+          { level: 'query', emit: 'event' },
+          { level: 'info', emit: 'stdout' },
+          { level: 'warn', emit: 'stdout' },
+          { level: 'error', emit: 'stdout' }
+        ]
       : ['error']
   })
 
-  await prisma.$connect()
+  let connectTimeout: NodeJS.Timeout | undefined
+  const connectTimeoutPromise = new Promise<never>((_, reject) => {
+    connectTimeout = setTimeout(() => {
+      reject(new Error(`Prisma connection timeout after ${connectTimeoutMs}ms`))
+    }, connectTimeoutMs)
+  })
+
+  try {
+    await Promise.race([
+      prisma.$connect(),
+      connectTimeoutPromise
+    ])
+  } catch (error) {
+    fastify.log.error({ err: error }, 'Failed to initialize Prisma Client')
+    throw error
+  } finally {
+    if (connectTimeout) {
+      clearTimeout(connectTimeout)
+    }
+  }
 
   fastify.decorate('prisma', prisma)
 
