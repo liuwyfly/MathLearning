@@ -1,4 +1,6 @@
 import fp from 'fastify-plugin'
+import type { FastifyError } from 'fastify'
+import { Prisma } from '../generated/prisma-client'
 
 export interface SupportPluginOptions {
   // Specify Support plugin options here
@@ -9,6 +11,68 @@ export interface SupportPluginOptions {
 export default fp<SupportPluginOptions>(async (fastify, opts) => {
   fastify.decorate('someSupport', function () {
     return 'hugs'
+  })
+
+  fastify.setErrorHandler((error, _request, reply) => {
+    const fastifyError = error as FastifyError & {
+      validation?: Array<{ instancePath?: string, message?: string, params?: { missingProperty?: string } }>
+    }
+
+    if (fastifyError.validation != null) {
+      const messages = fastifyError.validation.map((issue) => {
+        const missingProperty = issue?.params?.missingProperty
+        const instancePath = issue?.instancePath?.replace(/^\//, '')
+        const fieldName = missingProperty ?? instancePath
+        const issueMessage = issue?.message
+
+        if (fieldName != null && fieldName !== '' && issueMessage != null && issueMessage !== '') {
+          return `字段 ${fieldName}: ${issueMessage}`
+        }
+
+        if (fieldName != null && fieldName !== '') {
+          return `字段 ${fieldName} 不合法`
+        }
+
+        if (issueMessage != null && issueMessage !== '') {
+          return issueMessage
+        }
+
+        return '参数不合法'
+      })
+
+      const localizedMessage = messages.length > 0
+        ? `请求参数校验失败: ${messages.join('；')}`
+        : '请求参数校验失败'
+
+      return reply.status(400).send({
+        statusCode: 400,
+        code: 'FST_ERR_VALIDATION',
+        error: 'Bad Request',
+        message: localizedMessage
+      })
+    }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        return reply.status(409).send({
+          statusCode: 409,
+          code: error.code,
+          error: 'Conflict',
+          message: '数据已存在，不能重复创建'
+        })
+      }
+
+      if (error.code === 'P2025') {
+        return reply.status(404).send({
+          statusCode: 404,
+          code: error.code,
+          error: 'Not Found',
+          message: '目标数据不存在'
+        })
+      }
+    }
+
+    return reply.send(error)
   })
 })
 

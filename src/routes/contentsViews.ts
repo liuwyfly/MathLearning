@@ -12,13 +12,13 @@ export type ContentRow = {
 
 export const GetContents = async function (this: FastifyInstance, _request: FastifyRequest, reply: FastifyReply): Promise<{ data: ContentRow[] } | never> {
 	try {
-		const rows = await this.prisma.mathlearning_contents.findMany({
+		const rows = await this.prisma.contents.findMany({
 			orderBy: { id: 'asc' },
 			select: { id: true, name: true, name_en: true }
 		})
 		return { data: rows }
 	} catch (err) {
-		this.log.error({ err }, 'query mathlearning_contents failed')
+		this.log.error({ err }, 'query contents failed')
 		return reply.internalServerError('query contents failed') as never
 	}
 }
