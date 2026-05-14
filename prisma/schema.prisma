@@ -27,6 +27,7 @@ model Contents {
   id         Int       @id @default(autoincrement()) @db.UnsignedInt
   name       String    @db.VarChar(256)
   name_en    String?   @db.VarChar(256)
+  oss_path   String?   @db.VarChar(256)
   created_at DateTime  @default(now()) @db.DateTime(0)
   updated_at DateTime  @default(now()) @db.DateTime(0)
   articles   Article[]
@@ -35,15 +36,23 @@ model Contents {
 }
 
 model ContentsArticle {
+  id          Int      @id @default(autoincrement()) @db.UnsignedInt
+  contents_id Int      @db.UnsignedInt
+  article_id  Int      @db.UnsignedInt
+  created_at  DateTime @default(now()) @db.DateTime(0)
+  article     Article  @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_contentsarticle_article_id")
+
+  @@unique([contents_id, article_id], map: "uk_content_article")
+  @@index([article_id], map: "fk_contentsarticle_article_id")
+  @@map("mathlearning_contents_articles")
+}
+
+model Markdown {
   id         Int      @id @default(autoincrement()) @db.UnsignedInt
-  content_id Int      @db.UnsignedInt
+  oss_path   String   @db.VarChar(352)
   article_id Int      @db.UnsignedInt
   created_at DateTime @default(now()) @db.DateTime(0)
-  article    Article  @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_contentsarticle_article_id")
-  contentsId Int?     @db.UnsignedInt
 
-  @@unique([content_id, article_id], map: "uk_content_article")
-  @@index([article_id], map: "fk_contentsarticle_article_id")
-  @@index([content_id], map: "fk_contentsarticle_content_id")
-  @@map("mathlearning_contents_articles")
+  @@index([article_id], map: "idx_markdown_article_id")
+  @@map("mathlearning_markdown")
 }

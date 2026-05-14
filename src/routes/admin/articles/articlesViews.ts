@@ -1,4 +1,6 @@
 import { type FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { AuthorizeByRole } from "../../../common/auth";
+import { ROLE_CONTENT_ADMIN } from "../../../common/constants";
 
 export type ArticleListQuery = {
     contents_id?: string;
@@ -82,6 +84,8 @@ export const PostArticle = async function (
     request: FastifyRequest,
     reply: FastifyReply,
 ): Promise<{ success: boolean; data: any } | never> {
+    // 验证角色
+    await AuthorizeByRole(this, request, [ROLE_CONTENT_ADMIN]);
     const { title, title_en, contents_id, sort } = request.body as {
         title: string;
         title_en?: string;
@@ -89,13 +93,25 @@ export const PostArticle = async function (
         sort: number;
     };
 
-    const article = await this.prisma.article.create({
-        data: {
-            title,
-            title_en: title_en || null,
-            contents_id: Number(contents_id),
-            sort: Number(sort),
-        },
+    // 在事务中创建 article 并关联 ContentsArticle，保证原子性
+    const article = await this.prisma.$transaction(async (tx) => {
+        const articleObj = await tx.article.create({
+            data: {
+                title,
+                title_en: title_en || null,
+                contents_id: Number(contents_id),
+                sort: Number(sort),
+            },
+        });
+
+        await tx.contentsArticle.create({
+            data: {
+                contents_id: Number(contents_id),
+                article_id: articleObj.id,
+            },
+        });
+
+        return articleObj;
     });
 
     return reply.status(201).send({ success: true, data: article });
