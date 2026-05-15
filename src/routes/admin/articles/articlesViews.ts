@@ -70,11 +70,8 @@ export const GetArticles = async function (
     request: FastifyRequest,
     reply: FastifyReply,
 ): Promise<{ data: any[] } | never> {
-    const { contents_id } = request.query as { contents_id?: string };
-
     const articles = await this.prisma.article.findMany({
-        where: contents_id ? { contents_id: parseInt(contents_id) } : undefined,
-        orderBy: { created_at: "desc" },
+        orderBy: { id: "desc" }
     });
     return reply.send({ success: true, data: articles });
 };
@@ -86,11 +83,11 @@ export const PostArticle = async function (
 ): Promise<{ success: boolean; data: any } | never> {
     // 验证角色
     await AuthorizeByRole(this, request, [ROLE_CONTENT_ADMIN]);
-    const { title, title_en, contents_id, sort } = request.body as {
+    const { title, title_en, contents_id, article_sort } = request.body as {
         title: string;
         title_en?: string;
         contents_id: number;
-        sort: number;
+        article_sort: number;
     };
 
     // 在事务中创建 article 并关联 ContentsArticle，保证原子性
@@ -98,9 +95,7 @@ export const PostArticle = async function (
         const articleObj = await tx.article.create({
             data: {
                 title,
-                title_en: title_en || null,
-                contents_id: Number(contents_id),
-                sort: Number(sort),
+                title_en: title_en || null
             },
         });
 
@@ -108,6 +103,7 @@ export const PostArticle = async function (
             data: {
                 contents_id: Number(contents_id),
                 article_id: articleObj.id,
+                article_sort: article_sort
             },
         });
 

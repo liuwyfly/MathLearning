@@ -110,10 +110,11 @@ class PostMarkdownHelper {
         const rows = await this.fastify.prisma.$queryRaw<
             { contents_oss_path: string | null }[]
         >`
-            SELECT c.oss_path AS contents_oss_path
-            FROM mathlearning_article AS a
-            INNER JOIN mathlearning_contents AS c ON a.contents_id = c.id
-            INNER JOIN mathlearning_contents_articles AS ca ON a.id = ca.article_id
+            SELECT c.oss_path FROM mathlearning_article a
+            JOIN mathlearning_contents_articles ca ON
+                ca.article_id = a.id
+            JOIN mathlearning_contents c ON
+                c.id = ca.contents_id
             WHERE a.id = ${articleId}
         `;
 
