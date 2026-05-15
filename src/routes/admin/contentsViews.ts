@@ -40,6 +40,14 @@ function normalizeNameEn (nameEn: unknown): string | null {
 
 export const GetContents= async function (this: FastifyInstance, _request: FastifyRequest, reply: FastifyReply): 
   Promise<{ data: ContentRow[] } | never> {
+    // 这里打印 log
+    // 输出 Header Authentication 的值
+    const authHeader = _request.headers['authorization'] || _request.headers['Authorization']
+    this.log.info({ authHeader }, 'get contents list, authorization header')
+    // 输出 log uid
+    const uid = (_request.user as Record<string, unknown> | undefined)?.uid
+    this.log.info({ uid }, 'jwt decoded uid')
+
     try {
       const rows = await this.prisma.contents.findMany({
         orderBy: { id: 'asc' }
