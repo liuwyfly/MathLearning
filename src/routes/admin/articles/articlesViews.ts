@@ -14,7 +14,7 @@ export type PostArticleBody = {
     title: string;
     title_en?: string;
     contents_id: number;
-    sort: number;
+    article_sort?: number;
 };
 
 export type PutArticleBody = {
@@ -43,12 +43,12 @@ export const articleListQuerySchema = {
 
 export const postArticleBodySchema = {
     type: "object",
-    required: ["title", "contents_id", "sort"],
+    required: ["title", "contents_id"],
     properties: {
         title: { type: "string", minLength: 1, maxLength: 256 },
         title_en: { type: "string", maxLength: 384 },
         contents_id: { type: "number" },
-        sort: { type: "number" },
+        article_sort: { type: "number", default: 0.0 },
     },
     additionalProperties: false,
 } as const;
@@ -83,11 +83,11 @@ export const PostArticle = async function (
 ): Promise<{ success: boolean; data: any } | never> {
     // 验证角色
     await AuthorizeByRole(this, request, [ROLE_CONTENT_ADMIN]);
-    const { title, title_en, contents_id, article_sort } = request.body as {
+    const { title, title_en, contents_id, article_sort = 0.0 } = request.body as {
         title: string;
         title_en?: string;
         contents_id: number;
-        article_sort: number;
+        article_sort?: number;
     };
 
     // 在事务中创建 article 并关联 ContentsArticle，保证原子性
