@@ -1,6 +1,7 @@
 import { type FastifyPluginAsync } from "fastify";
 import {
     GetArticles,
+    GetArticleDetail,
     PostArticle,
     PutArticle,
     DeleteArticle,
@@ -36,9 +37,19 @@ const articles: FastifyPluginAsync = async (fastify): Promise<void> => {
         PostArticle,
     );
 
+    // 获取单个文章详情
+    fastify.get<{ Params: ArticleParams }>(
+        "/article/:id",
+        {
+            onRequest: [fastify.authenticate],
+            schema: { params: articleIdParamsSchema },
+        },
+        GetArticleDetail,
+    );
+
     // 编辑文章
     fastify.put<{ Params: ArticleParams; Body: PutArticleBody }>(
-        "/articles/:id",
+        "/article/:id",
         {
             onRequest: [fastify.authenticate],
             schema: {

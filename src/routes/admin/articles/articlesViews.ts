@@ -1,6 +1,7 @@
 import { type FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { AuthorizeByRole } from "../../../common/auth";
 import { ROLE_CONTENT_ADMIN } from "../../../common/constants";
+import { pagination } from "../../../common/pagination";
 
 export type ArticleListQuery = {
     contents_id?: string;
@@ -37,6 +38,8 @@ export const articleListQuerySchema = {
     type: "object",
     properties: {
         contents_id: { type: "string", pattern: "^[1-9]\\d*$" },
+        page: { type: "string", pattern: "^[1-9]\\d*$", default: "1" },
+        page_size: { type: "string", pattern: "^[1-9]\\d*$", default: "10" },
     },
     additionalProperties: false,
 } as const;
@@ -69,11 +72,57 @@ export const GetArticles = async function (
     this: FastifyInstance,
     request: FastifyRequest,
     reply: FastifyReply,
-): Promise<{ data: any[] } | never> {
-    const articles = await this.prisma.article.findMany({
-        orderBy: { id: "desc" }
+): Promise<any> {
+    const { contents_id } = request.query as ArticleListQuery;
+    const { page: p, page_size: ps } = pagination(request);
+
+    const where: any = {};
+    if (contents_id) {
+        where.contentsArticles = {
+            some: {
+                contents_id: Number(contents_id),
+            },
+        };
+    }
+
+    const [articles, total] = await Promise.all([
+        this.prisma.article.findMany({
+            where,
+            orderBy: { id: "desc" },
+            skip: (p - 1) * ps,
+            take: ps,
+        }),
+        this.prisma.article.count({ where }),
+    ]);
+
+    return reply.send({ success: true, data: articles, total, page: p, page_size: ps });
+};
+
+export const GetArticleDetail = async function (
+    this: FastifyInstance,
+    request: FastifyRequest,
+    reply: FastifyReply,
+): Promise<any> {
+    const { id } = request.params as { id: string };
+
+    const articleId = parseInt(id);
+    if (isNaN(articleId)) {
+        return reply
+            .status(400)
+            .send({ success: false, message: "Invalid article id" });
+    }
+
+    const article = await this.prisma.article.findUnique({
+        where: { id: articleId },
     });
-    return reply.send({ success: true, data: articles });
+
+    if (!article) {
+        return reply
+            .status(404)
+            .send({ success: false, message: "Article not found" });
+    }
+
+    return reply.send({ success: true, data: article });
 };
 
 export const PostArticle = async function (

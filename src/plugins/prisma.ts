@@ -57,6 +57,12 @@ const prismaPlugin: FastifyPluginAsync = async (fastify, _opts) => {
       : ['error']
   })
 
+  if (process.env.NODE_ENV === 'development') {
+    prisma.$on('query', (e) => {
+      console.log(`[Prisma Query] ${e.query} | Params: ${e.params} | Duration: ${e.duration}ms`)
+    })
+  }
+
   let connectTimeout: NodeJS.Timeout | undefined
   const connectTimeoutPromise = new Promise<never>((_, reject) => {
     connectTimeout = setTimeout(() => {
