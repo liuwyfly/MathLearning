@@ -7,6 +7,10 @@ export type ArticleListQuery = {
     contents_id?: string;
 };
 
+export type ArticleDetailQuery = {
+    contents_id?: string;
+};
+
 export type ArticleParams = {
     id: string;
 };
@@ -40,6 +44,14 @@ export const articleListQuerySchema = {
         contents_id: { type: "string", pattern: "^[1-9]\\d*$" },
         page: { type: "string", pattern: "^[1-9]\\d*$", default: "1" },
         page_size: { type: "string", pattern: "^[1-9]\\d*$", default: "10" },
+    },
+    additionalProperties: false,
+} as const;
+
+export const ArticleDetailSchema = {
+    type: "object",
+    properties: {
+        contents_id: { type: "string", pattern: "^[1-9]\\d*$" },
     },
     additionalProperties: false,
 } as const;
@@ -132,6 +144,7 @@ export const GetArticleDetail = async function (
     reply: FastifyReply,
 ): Promise<any> {
     const { id } = request.params as { id: string };
+    const { contents_id } = request.query as ArticleDetailQuery;
 
     const articleId = parseInt(id);
     if (isNaN(articleId)) {
@@ -142,6 +155,22 @@ export const GetArticleDetail = async function (
 
     const article = await this.prisma.article.findUnique({
         where: { id: articleId },
+        include: {
+            contentsArticles: {
+                ...(contents_id != null && contents_id !== ""
+                    ? {
+                          where: {
+                              contents_id: Number(contents_id),
+                          },
+                      }
+                    : {}),
+                select: {
+                    article_sort: true,
+                },
+                orderBy: { id: "asc" },
+                take: 1,
+            },
+        },
     });
 
     if (!article) {
@@ -150,7 +179,15 @@ export const GetArticleDetail = async function (
             .send({ success: false, message: "Article not found" });
     }
 
-    return reply.send({ success: true, data: article });
+    const { contentsArticles, ...articleData } = article;
+
+    return reply.send({
+        success: true,
+        data: {
+            ...articleData,
+            article_sort: contentsArticles[0]?.article_sort ?? null,
+        },
+    });
 };
 
 export const PostArticle = async function (

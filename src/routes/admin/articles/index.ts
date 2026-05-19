@@ -6,13 +6,14 @@ import {
     PutArticle,
     DeleteArticle,
     type ArticleListQuery,
-    type ArticleParams,
-    type PostArticleBody,
-    type PutArticleBody,
+    ArticleParams,
+    PostArticleBody,
+    PutArticleBody,
     articleIdParamsSchema,
     articleListQuerySchema,
     postArticleBodySchema,
     putArticleBodySchema,
+    ArticleDetailSchema,
 } from "./articlesViews";
 import { PostMarkdown } from "./markdownViews";
 
@@ -42,7 +43,7 @@ const articles: FastifyPluginAsync = async (fastify): Promise<void> => {
         "/article/:id",
         {
             onRequest: [fastify.authenticate],
-            schema: { params: articleIdParamsSchema },
+            schema: { params: articleIdParamsSchema, querystring: ArticleDetailSchema },
         },
         GetArticleDetail,
     );
