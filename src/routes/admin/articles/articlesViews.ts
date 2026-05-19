@@ -22,7 +22,7 @@ export type PutArticleBody = {
     title?: string;
     title_en?: string;
     contents_id?: number;
-    sort?: number;
+    article_sort?: number;
 };
 
 export const articleIdParamsSchema = {
@@ -48,8 +48,17 @@ export const postArticleBodySchema = {
     type: "object",
     required: ["title", "contents_id"],
     properties: {
-        title: { type: "string", minLength: 1, maxLength: 256 },
-        title_en: { type: "string", maxLength: 384 },
+        title: {
+            type: "string",
+            minLength: 1,
+            maxLength: 5,
+            errorMessage: { maxLength: "标题不能超过256个字符" },
+        },
+        title_en: {
+            type: "string",
+            maxLength: 384,
+            errorMessage: { maxLength: "英文标题不能超过384个字符" },
+        },
         contents_id: { type: "number" },
         article_sort: { type: "number", default: 0.0 },
     },
@@ -60,10 +69,23 @@ export const putArticleBodySchema = {
     type: "object",
     minProperties: 1,
     properties: {
-        title: { type: "string", minLength: 1, maxLength: 256 },
-        title_en: { type: "string", maxLength: 384 },
+        title: {
+            type: "string",
+            minLength: 1,
+            maxLength: 256,
+            errorMessage: {
+                maxLength: "标题不能超过256个字符",
+            },
+        },
+        title_en: {
+            type: "string",
+            maxLength: 384,
+            errorMessage: {
+                maxLength: "英文标题不能超过384个字符",
+            },
+        },
         contents_id: { type: "number" },
-        sort: { type: "number" },
+        article_sort: { type: "number" },
     },
     additionalProperties: false,
 } as const;
@@ -95,7 +117,13 @@ export const GetArticles = async function (
         this.prisma.article.count({ where }),
     ]);
 
-    return reply.send({ success: true, data: articles, total, page: p, page_size: ps });
+    return reply.send({
+        success: true,
+        data: articles,
+        total,
+        page: p,
+        page_size: ps,
+    });
 };
 
 export const GetArticleDetail = async function (
@@ -132,7 +160,12 @@ export const PostArticle = async function (
 ): Promise<{ success: boolean; data: any } | never> {
     // 验证角色
     await AuthorizeByRole(this, request, [ROLE_CONTENT_ADMIN]);
-    const { title, title_en, contents_id, article_sort = 0.0 } = request.body as {
+    const {
+        title,
+        title_en,
+        contents_id,
+        article_sort = 0.0,
+    } = request.body as {
         title: string;
         title_en?: string;
         contents_id: number;
@@ -144,7 +177,7 @@ export const PostArticle = async function (
         const articleObj = await tx.article.create({
             data: {
                 title,
-                title_en: title_en || null
+                title_en: title_en || null,
             },
         });
 
@@ -152,7 +185,7 @@ export const PostArticle = async function (
             data: {
                 contents_id: Number(contents_id),
                 article_id: articleObj.id,
-                article_sort: article_sort
+                article_sort: article_sort,
             },
         });
 
