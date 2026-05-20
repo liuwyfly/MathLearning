@@ -63,7 +63,7 @@ export const postArticleBodySchema = {
         title: {
             type: "string",
             minLength: 1,
-            maxLength: 5,
+            maxLength: 256,
             errorMessage: { maxLength: "标题不能超过256个字符" },
         },
         title_en: {

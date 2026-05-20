@@ -29,6 +29,12 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
+# Configure container timezone to Asia/Shanghai
+RUN apk add --no-cache tzdata && \
+  ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
+  echo "Asia/Shanghai" > /etc/timezone
+ENV TZ=Asia/Shanghai
+
 # Copy built artifacts from builder
 COPY --from=builder /app/dist ./dist
 
