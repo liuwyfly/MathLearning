@@ -32,11 +32,20 @@
 import fp from 'fastify-plugin'
 import { PrismaClient } from '../generated/prisma-client'
 import { PrismaMariaDb } from '@prisma/adapter-mariadb'
+import type { PoolConfig } from 'mariadb'
 import type { FastifyPluginAsync } from 'fastify'
 
 // Singleton instance
 let prismaInstance: PrismaClient | null = null
 let isConnecting = false
+
+const toPositiveInt = (value: string | null | undefined, fallback: number): number => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback
+  }
+  return Math.floor(parsed)
+}
 
 const getPrismaClient = async (): Promise<PrismaClient> => {
   if (prismaInstance) {
@@ -59,8 +68,31 @@ const getPrismaClient = async (): Promise<PrismaClient> => {
       throw new Error('DATABASE_URL is required to initialize Prisma adapter')
     }
 
+    const database = new URL(databaseUrl)
+    const connectionLimit = toPositiveInt(
+      process.env.PRISMA_CONNECTION_LIMIT ?? database.searchParams.get('connection_limit'),
+      1
+    )
+    const acquireTimeoutMs = toPositiveInt(
+      process.env.PRISMA_POOL_TIMEOUT_MS
+        ?? (process.env.PRISMA_POOL_TIMEOUT ? String(Number(process.env.PRISMA_POOL_TIMEOUT) * 1000) : null),
+      15000
+    )
+    const idleTimeoutSeconds = toPositiveInt(process.env.PRISMA_IDLE_TIMEOUT_SECONDS, 60)
+
+    const adapterConfig: PoolConfig = {
+      host: database.hostname,
+      port: database.port ? toPositiveInt(database.port, 3306) : 3306,
+      user: decodeURIComponent(database.username),
+      password: decodeURIComponent(database.password),
+      database: database.pathname.replace(/^\//, ''),
+      connectionLimit,
+      acquireTimeout: acquireTimeoutMs,
+      idleTimeout: idleTimeoutSeconds
+    }
+
     const connectTimeoutMs = Number(process.env.PRISMA_CONNECT_TIMEOUT_MS ?? 8000)
-    const adapter = new PrismaMariaDb(databaseUrl)
+    const adapter = new PrismaMariaDb(adapterConfig)
 
     const newClient = new PrismaClient({
       adapter,
