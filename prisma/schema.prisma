@@ -49,8 +49,10 @@ model Markdown {
   id         Int      @id @default(autoincrement()) @db.UnsignedInt
   oss_path   String   @db.VarChar(352)
   article_id Int      @db.UnsignedInt
+  sort       Float    @default(0) @db.Float
   created_at DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @db.DateTime(0)
 
   @@index([article_id], map: "idx_markdown_article_id")
+  @@index([sort], map: "idx_markdown_sort")
   @@map("mathlearning_markdown")
 }

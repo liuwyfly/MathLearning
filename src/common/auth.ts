@@ -1,5 +1,6 @@
 import { type FastifyRequest, type FastifyInstance } from "fastify";
 import { serviceRequest } from "./httpClient";
+import { AUTH_SERV_AUTHORIZATION_ROLE_PATH } from "./constants";
 
 interface AuthRoleResponse {
     authorized: boolean;
@@ -28,7 +29,7 @@ export async function AuthorizeByRole(
     let response;
     try {
         response = await serviceRequest(
-            `${authServiceUrl}/auth-serv/auth/authorization_role`,
+            `${authServiceUrl}${AUTH_SERV_AUTHORIZATION_ROLE_PATH}`,
             {
                 method: "POST",
                 headers: {

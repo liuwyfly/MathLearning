@@ -108,7 +108,7 @@ class PostMarkdownHelper {
 
     async queryContentOssPath(articleId: number): Promise<string | null> {
         const rows = await this.fastify.prisma.$queryRaw<
-            { contents_oss_path: string | null }[]
+            { oss_path: string | null }[]
         >`
             SELECT c.oss_path FROM mathlearning_article a
             JOIN mathlearning_contents_articles ca ON
@@ -116,13 +116,15 @@ class PostMarkdownHelper {
             JOIN mathlearning_contents c ON
                 c.id = ca.contents_id
             WHERE a.id = ${articleId}
+            ORDER BY article_sort ASC
+            LIMIT 1
         `;
 
         if (!rows || rows.length === 0) {
             return null;
         }
 
-        return rows[0].contents_oss_path ?? null;
+        return rows[0].oss_path ?? null;
     }
 
     async requestOssFileExists(objectKey: string): Promise<boolean> {
@@ -164,6 +166,7 @@ class PostMarkdownHelper {
             data: {
                 article_id: articleId,
                 oss_path: ossPath,
+                sort: this.multipartData.sort ?? 0,
             },
         });
 

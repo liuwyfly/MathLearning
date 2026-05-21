@@ -109,25 +109,55 @@ export const GetArticles = async function (
 ): Promise<any> {
     const { contents_id } = request.query as ArticleListQuery;
     const { page: p, page_size: ps } = pagination(request);
+    const offset = (p - 1) * ps;
 
-    const where: any = {};
+    let articlesPromise;
+    let countPromise;
+
     if (contents_id) {
-        where.contentsArticles = {
-            some: {
-                contents_id: Number(contents_id),
-            },
-        };
+        const cid = Number(contents_id);
+        articlesPromise = this.prisma.$queryRaw`
+            SELECT 
+                a.id, a.title, a.title_en, a.created_at, a.updated_at,
+                ca.article_sort
+            FROM mathlearning_article a
+            INNER JOIN mathlearning_contents_articles ca ON a.id = ca.article_id
+            WHERE ca.contents_id = ${cid}
+            ORDER BY a.id DESC
+            LIMIT ${ps} OFFSET ${offset}
+        `;
+        countPromise = this.prisma.$queryRaw`
+            SELECT COUNT(*) as total 
+            FROM mathlearning_article a
+            INNER JOIN mathlearning_contents_articles ca ON a.id = ca.article_id
+            WHERE ca.contents_id = ${cid}
+        `;
+    } else {
+        articlesPromise = this.prisma.$queryRaw`
+            SELECT 
+                a.id, a.title, a.title_en, a.created_at, a.updated_at,
+                NULL as article_sort
+            FROM mathlearning_article a
+            ORDER BY a.id DESC
+            LIMIT ${ps} OFFSET ${offset}
+        `;
+        countPromise = this.prisma.$queryRaw`
+            SELECT COUNT(*) as total FROM mathlearning_article a
+        `;
     }
 
-    const [articles, total] = await Promise.all([
-        this.prisma.article.findMany({
-            where,
-            orderBy: { id: "desc" },
-            skip: (p - 1) * ps,
-            take: ps,
-        }),
-        this.prisma.article.count({ where }),
-    ]);
+    const [articlesResult, countResult] = await Promise.all([
+        articlesPromise,
+        countPromise,
+    ]) as [any[], any[]];
+
+    const articles = articlesResult.map((row: any) => ({
+        ...row,
+        id: Number(row.id),
+        article_sort: row.article_sort != null ? Number(row.article_sort) : null,
+    }));
+
+    const total = Number((countResult[0] as any)?.total ?? 0);
 
     return reply.send({
         success: true,
@@ -238,10 +268,8 @@ export const PutArticle = async function (
     reply: FastifyReply,
 ): Promise<{ success: boolean; data: any } | never> {
     const { id } = request.params as { id: string };
-    const { title, title_en } = request.body as {
-        title?: string;
-        title_en?: string;
-    };
+    const { title, title_en, contents_id, article_sort } =
+        request.body as PutArticleBody;
 
     const articleId = parseInt(id);
     if (isNaN(articleId)) {
@@ -260,12 +288,28 @@ export const PutArticle = async function (
             .send({ success: false, message: "Article not found" });
     }
 
-    const updatedArticle = await this.prisma.article.update({
-        where: { id: articleId },
-        data: {
-            ...(title !== undefined && { title }),
-            ...(title_en !== undefined && { title_en }),
-        },
+    const updatedArticle = await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.article.update({
+            where: { id: articleId },
+            data: {
+                ...(title !== undefined && { title }),
+                ...(title_en !== undefined && { title_en }),
+            },
+        });
+
+        if (contents_id !== undefined) {
+            await tx.contentsArticle.updateMany({
+                where: {
+                    contents_id,
+                    article_id: articleId,
+                },
+                data: {
+                    ...(article_sort !== undefined && { article_sort }),
+                },
+            });
+        }
+
+        return updated;
     });
 
     return reply.send({ success: true, data: updatedArticle });
