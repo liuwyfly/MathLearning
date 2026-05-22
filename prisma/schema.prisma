@@ -11,8 +11,8 @@ model Article {
   id               Int               @id @default(autoincrement()) @db.UnsignedInt
   title            String            @db.VarChar(256)
   title_en         String?           @db.VarChar(384)
-  created_at       DateTime          @default(dbgenerated("CURRENT_TIMESTAMP")) @db.DateTime(0)
-  updated_at       DateTime          @default(dbgenerated("CURRENT_TIMESTAMP")) @db.DateTime(0)
+  created_at       DateTime          @default(now()) @db.DateTime(3)
+  updated_at       DateTime          @default(now()) @db.DateTime(3)
   contentsArticles ContentsArticle[]
 
   @@map("mathlearning_article")
@@ -23,8 +23,9 @@ model Contents {
   name             String            @db.VarChar(256)
   name_en          String?           @db.VarChar(256)
   oss_path         String?           @db.VarChar(256)
-  created_at       DateTime          @default(dbgenerated("CURRENT_TIMESTAMP")) @db.DateTime(0)
-  updated_at       DateTime          @default(dbgenerated("CURRENT_TIMESTAMP")) @db.DateTime(0)
+  sort             Float             @default(0) @db.Float
+  created_at       DateTime          @default(now()) @db.DateTime(3)
+  updated_at       DateTime          @default(now()) @db.DateTime(3)
   contentsArticles ContentsArticle[]
 
   @@map("mathlearning_contents")
@@ -35,7 +36,7 @@ model ContentsArticle {
   contents_id  Int      @db.UnsignedInt
   article_id   Int      @db.UnsignedInt
   article_sort Float    @default(0) @db.Float
-  created_at   DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @db.DateTime(0)
+  created_at   DateTime @default(now()) @db.DateTime(3)
   article      Article  @relation(fields: [article_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_contentsarticle_article_id")
   contents     Contents @relation(fields: [contents_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_contentsarticle_contents_id")
 
@@ -46,11 +47,13 @@ model ContentsArticle {
 }
 
 model Markdown {
-  id         Int      @id @default(autoincrement()) @db.UnsignedInt
-  oss_path   String   @db.VarChar(352)
-  article_id Int      @db.UnsignedInt
-  sort       Float    @default(0) @db.Float
-  created_at DateTime @default(dbgenerated("CURRENT_TIMESTAMP")) @db.DateTime(0)
+  id         Int    @id @default(autoincrement()) @db.UnsignedInt
+  oss_path   String @db.VarChar(352)
+  article_id Int    @db.UnsignedInt
+  sort       Float  @default(0) @db.Float
+  language   String @db.VarChar(6)
+
+  created_at DateTime @default(now()) @db.DateTime(3)
 
   @@index([article_id], map: "idx_markdown_article_id")
   @@index([sort], map: "idx_markdown_sort")

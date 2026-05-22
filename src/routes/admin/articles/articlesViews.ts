@@ -2,6 +2,7 @@ import { type FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { AuthorizeByRole } from "../../../common/auth";
 import { ROLE_CONTENT_ADMIN } from "../../../common/constants";
 import { pagination } from "../../../common/pagination";
+import { prismaLocalNow } from "../../../common/timeUtil";
 
 export type ArticleListQuery = {
     contents_id?: string;
@@ -245,6 +246,8 @@ export const PostArticle = async function (
             data: {
                 title,
                 title_en: title_en || null,
+                created_at: prismaLocalNow(),
+                updated_at: prismaLocalNow(),
             },
         });
 
@@ -294,6 +297,7 @@ export const PutArticle = async function (
             data: {
                 ...(title !== undefined && { title }),
                 ...(title_en !== undefined && { title_en }),
+                updated_at: prismaLocalNow(),
             },
         });
 

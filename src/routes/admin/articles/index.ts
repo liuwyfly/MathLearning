@@ -15,7 +15,7 @@ import {
     putArticleBodySchema,
     ArticleDetailSchema,
 } from "./articlesViews";
-import { PostMarkdown } from "./markdownViews";
+import { PostMarkdown, GetMarkdownList, DeleteMarkdown } from "./markdownViews";
 
 const articles: FastifyPluginAsync = async (fastify): Promise<void> => {
     // 获取文章列表
@@ -43,7 +43,10 @@ const articles: FastifyPluginAsync = async (fastify): Promise<void> => {
         "/article/:id",
         {
             onRequest: [fastify.authenticate],
-            schema: { params: articleIdParamsSchema, querystring: ArticleDetailSchema },
+            schema: {
+                params: articleIdParamsSchema,
+                querystring: ArticleDetailSchema,
+            },
         },
         GetArticleDetail,
     );
@@ -72,7 +75,25 @@ const articles: FastifyPluginAsync = async (fastify): Promise<void> => {
     );
 
     // 上传文章的 Markdown 文件
-    fastify.post("/markdown", PostMarkdown);
+    fastify.post(
+        "/markdown",
+        { onRequest: [fastify.authenticate] },
+        PostMarkdown,
+    );
+
+    // 查询 Markdown 列表
+    fastify.get(
+        "/markdown_list",
+        { onRequest: [fastify.authenticate] },
+        GetMarkdownList,
+    );
+
+    // 删除 Markdown 文件
+    fastify.delete(
+        "/markdown/:id",
+        { onRequest: [fastify.authenticate] },
+        DeleteMarkdown,
+    );
 };
 
 export default articles;

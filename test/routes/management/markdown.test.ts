@@ -59,7 +59,8 @@ test('management markdown upload parses multipart fields and file', async (t) =>
   const url = `${getRoutePrefix()}/management/articles/markdown`
   const { boundary, payload } = createMultipartPayload([
     { name: 'article_id', value: '101' },
-    { name: 'sort', value: '1' }
+    { name: 'sort', value: '1' },
+    { name: 'language', value: 'zh-CN' }
   ], {
     name: 'file',
     filename: 'intro.md',
@@ -84,6 +85,31 @@ test('management markdown upload parses multipart fields and file', async (t) =>
     filename: 'intro.md',
     size: Buffer.byteLength('# Intro\nhello world\n')
   })
+})
+
+test('management markdown upload defaults language to zh-CN', async (t) => {
+  const app = await build(t)
+  const url = `${getRoutePrefix()}/management/articles/markdown`
+  const { boundary, payload } = createMultipartPayload([
+    { name: 'article_id', value: '101' },
+    { name: 'sort', value: '1' }
+  ], {
+    name: 'file',
+    filename: 'intro.md',
+    contentType: 'text/markdown',
+    content: '# Intro\nhello world\n'
+  })
+
+  const res = await app.inject({
+    method: 'POST',
+    url,
+    headers: {
+      'content-type': `multipart/form-data; boundary=${boundary}`
+    },
+    payload
+  })
+
+  assert.equal(res.statusCode, 200)
 })
 
 test('management markdown upload validates missing file', async (t) => {

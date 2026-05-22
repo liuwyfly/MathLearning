@@ -2,11 +2,15 @@ import { type MultipartFile } from "@fastify/multipart";
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { AuthorizeByRole } from "../../../common/auth";
 import { type MultipartField } from "../../../common/multipart";
+import { pagination } from "../../../common/pagination";
 import {
     ParsePositiveIntegerField,
     ParsePositiveNumberField,
 } from "../../../common/validation";
+import { MarkdownFilter } from "./markdownFilter";
+import { MarkdownValidator } from "./markdownValidator";
 import OSS from "ali-oss";
+import { prismaLocalNow } from "../../../common/timeUtil";
 
 
 type PostMarkdownResponse = {
@@ -29,11 +33,13 @@ class PostMarkdownHelper {
         articleId: number | null;
         sort: number | null;
         filename: string | null;
+        language: string;
         fileBuffer: Buffer | null;
     } = {
         articleId: null,
         sort: null,
         filename: null,
+        language: "",
         fileBuffer: null,
     };
 
@@ -49,7 +55,7 @@ class PostMarkdownHelper {
         });
     }
 
-    private async parseMultipart(): Promise<void> {
+    async parseMultipart(): Promise<void> {
         if (this.multipartParsed) {
             return;
         }
@@ -82,27 +88,32 @@ class PostMarkdownHelper {
 
             if (part.fieldname === "sort") {
                 this.multipartData.sort = ParsePositiveNumberField(part.value);
+                continue;
+            }
+
+            if (part.fieldname === "language") {
+                this.multipartData.language = String(part.value ?? "");
             }
         }
     }
 
     async getArticleId(): Promise<number | null> {
-        await this.parseMultipart();
         return this.multipartData.articleId;
     }
 
     async getSort(): Promise<number | null> {
-        await this.parseMultipart();
         return this.multipartData.sort;
     }
 
+    async getLanguage(): Promise<string> {
+        return this.multipartData.language
+    }
+
     async getFilename(): Promise<string | null> {
-        await this.parseMultipart();
         return this.multipartData.filename;
     }
 
     async getFileBuffer(): Promise<Buffer | null> {
-        await this.parseMultipart();
         return this.multipartData.fileBuffer;
     }
 
@@ -161,12 +172,15 @@ class PostMarkdownHelper {
     async createMarkdownRecord(
         articleId: number,
         ossPath: string,
+        language: string,
     ): Promise<void> {
         await this.fastify.prisma.markdown.create({
             data: {
                 article_id: articleId,
                 oss_path: ossPath,
                 sort: this.multipartData.sort ?? 0,
+                language,
+                created_at: prismaLocalNow()
             },
         });
 
@@ -186,7 +200,7 @@ export const PostMarkdown = async function (
     request: FastifyRequest,
     reply: FastifyReply,
 ): Promise<PostMarkdownResponse | never> {
-    await request.jwtVerify();
+    // await request.jwtVerify();
     await AuthorizeByRole(this, request, ["content_admin"]);
 
     const user = request.user as { uid: number; username: string };
@@ -204,15 +218,10 @@ export const PostMarkdown = async function (
     const helper = new PostMarkdownHelper(this, request);
 
     // step 1: 获取 article_id
+    await helper.parseMultipart(); // 注意：这个函数必须在获取 article_id 之前调用，以确保 multipart 数据被解析
     const articleId = await helper.getArticleId();
     if (articleId == null) {
         return reply.badRequest("article_id must be a positive integer");
-    }
-
-    // step 2: 查询 oss_path
-    const basePath = await helper.queryContentOssPath(articleId);
-    if (basePath == null) {
-        return reply.badRequest("No oss_path found for the given article_id");
     }
 
     // 从 multipart 中取出文件信息
@@ -226,6 +235,13 @@ export const PostMarkdown = async function (
         return reply.badRequest("file is required");
     }
 
+    const language = await helper.getLanguage();
+
+    // step 2: 查询 oss_path
+    const basePath = await helper.queryContentOssPath(articleId);
+    if (basePath == null) {
+        return reply.badRequest("No oss_path found for the given article_id");
+    }
     const objectKey = [basePath, filename].join("/");
 
     // step 3: 检查 OSS 文件是否已存在
@@ -242,7 +258,7 @@ export const PostMarkdown = async function (
     const result = await helper.uploadOss(objectKey, fileBuffer);
 
     // step 5: 创建 Markdown 记录
-    await helper.createMarkdownRecord(articleId, objectKey);
+    await helper.createMarkdownRecord(articleId, objectKey, language);
 
     const sort = await helper.getSort();
     if (sort == null) {
@@ -256,5 +272,120 @@ export const PostMarkdown = async function (
         filename,
         size: fileBuffer.length,
         result,
+    });
+};
+
+/*
+ * 查询 Markdown 列表
+ * url: GET /math-learning/management/articles/markdown_list
+ */
+export const GetMarkdownList = async function (
+    this: FastifyInstance,
+    request: FastifyRequest,
+    reply: FastifyReply,
+): Promise<any> {
+    await AuthorizeByRole(this, request, ["content_admin"]);
+
+    const { page: p, page_size: ps } = pagination(request);
+    const offset = (p - 1) * ps;
+
+    const validator = new MarkdownValidator(this, request);
+    const filter = new MarkdownFilter(this, request);
+
+    const validationError = validator.validate();
+    if (validationError) {
+        return reply
+            .status(400)
+            .send({ success: false, message: validationError });
+    }
+
+    const [listResult, total] = await Promise.all([
+        filter.queryList(ps, offset),
+        filter.queryCount(),
+    ]);
+
+    const list = listResult.map((row: any) => ({
+        ...row,
+        id: Number(row.id),
+        article_id: Number(row.article_id),
+        sort: Number(row.sort),
+    }));
+
+    return reply.send({
+        success: true,
+        data: list,
+        total,
+        page: p,
+        page_size: ps,
+    });
+};
+
+/*
+ * 删除 Markdown 文件
+ * url: DELETE /math-learning/management/articles/markdown/:id
+ */
+export const DeleteMarkdown = async function (
+    this: FastifyInstance,
+    request: FastifyRequest,
+    reply: FastifyReply,
+): Promise<any> {
+    await AuthorizeByRole(this, request, ["content_admin"]);
+
+    const { id } = request.params as { id: string };
+    const markdownId = parseInt(id);
+    if (isNaN(markdownId)) {
+        return reply
+            .status(400)
+            .send({ success: false, message: "Invalid markdown id" });
+    }
+
+    const markdown = await this.prisma.markdown.findUnique({
+        where: { id: markdownId },
+    });
+
+    if (!markdown) {
+        return reply
+            .status(404)
+            .send({ success: false, message: "Markdown not found" });
+    }
+
+    // 从 OSS 删除文件
+    const ossClient = new OSS({
+        region: process.env.OSS_REGION,
+        accessKeyId: process.env.OSS_ACCESS_KEY_ID ?? "",
+        accessKeySecret: process.env.OSS_ACCESS_KEY_SECRET ?? "",
+        authorizationV4: true,
+        bucket: "turbo2016",
+    });
+
+    try {
+        await ossClient.delete(markdown.oss_path);
+        this.log.info(
+            { ossPath: markdown.oss_path },
+            "markdown file deleted from OSS successfully",
+        );
+    } catch (err: any) {
+        if (err.code === "NoSuchKey" || err.status === 404) {
+            this.log.warn(
+                { ossPath: markdown.oss_path },
+                "oss file not found when deleting",
+            );
+        } else {
+            this.log.error(
+                { err, ossPath: markdown.oss_path },
+                "delete markdown file from OSS failed",
+            );
+            throw err;
+        }
+    }
+
+    // 从数据库删除记录
+    await this.prisma.markdown.delete({
+        where: { id: markdownId },
+    });
+
+    return reply.send({
+        success: true,
+        message: "Markdown deleted successfully",
     });
 };
