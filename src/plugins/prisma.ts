@@ -86,6 +86,14 @@ const getPrismaClient = async (): Promise<PrismaClient> => {
                     : null),
             15000,
         );
+        const transactionMaxWaitMs = toPositiveInt(
+            process.env.PRISMA_TX_MAX_WAIT_MS,
+            5000,
+        );
+        const transactionTimeoutMs = toPositiveInt(
+            process.env.PRISMA_TX_TIMEOUT_MS,
+            10000,
+        );
         const idleTimeoutSeconds = toPositiveInt(
             process.env.PRISMA_IDLE_TIMEOUT_SECONDS,
             60,
@@ -109,6 +117,10 @@ const getPrismaClient = async (): Promise<PrismaClient> => {
 
         const newClient = new PrismaClient({
             adapter,
+            transactionOptions: {
+                maxWait: transactionMaxWaitMs,
+                timeout: transactionTimeoutMs,
+            },
             log:
                 process.env.NODE_ENV === "development"
                     ? [

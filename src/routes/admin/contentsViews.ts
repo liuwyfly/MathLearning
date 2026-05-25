@@ -142,17 +142,15 @@ export const PostContent = async function (
     const sortValue = typeof sort === "number" ? sort : 0;
 
     try {
-        const createdRow = await this.prisma.$transaction(async (tx) => {
-            const now = prismaLocalNow();
-            return tx.contents.create({
-                data: {
-                    name: normalizedName,
-                    name_en: normalizedNameEn,
-                    sort: sortValue,
-                    created_at: now,
-                    updated_at: now,
-                },
-            });
+        const now = prismaLocalNow();
+        const createdRow = await this.prisma.contents.create({
+            data: {
+                name: normalizedName,
+                name_en: normalizedNameEn,
+                sort: sortValue,
+                created_at: now,
+                updated_at: now,
+            },
         });
 
         reply.code(201);
