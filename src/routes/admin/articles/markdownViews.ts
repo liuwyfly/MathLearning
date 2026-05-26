@@ -35,12 +35,14 @@ class PostMarkdownHelper {
         sort: number | null;
         filename: string | null;
         language: string;
+        name: string;
         fileBuffer: Buffer | null;
     } = {
         articleId: null,
         sort: null,
         filename: null,
         language: "",
+        name: "",
         fileBuffer: null,
     };
 
@@ -95,6 +97,10 @@ class PostMarkdownHelper {
             if (part.fieldname === "language") {
                 this.multipartData.language = String(part.value ?? "");
             }
+
+            if (part.fieldname === "name") {
+                this.multipartData.name = String(part.value ?? "");
+            }
         }
     }
 
@@ -107,7 +113,11 @@ class PostMarkdownHelper {
     }
 
     async getLanguage(): Promise<string> {
-        return this.multipartData.language
+        return this.multipartData.language;
+    }
+
+    async getName(): Promise<string> {
+        return this.multipartData.name;
     }
 
     async getFilename(): Promise<string | null> {
@@ -174,10 +184,12 @@ class PostMarkdownHelper {
         articleId: number,
         ossPath: string,
         language: string,
+        name: string,
     ): Promise<void> {
         await this.fastify.prisma.markdown.create({
             data: {
                 article_id: articleId,
+                name,
                 oss_path: ossPath,
                 sort: this.multipartData.sort ?? 0,
                 language,
@@ -243,6 +255,11 @@ export const PostMarkdown = async function (
         );
     }
 
+    const name = await helper.getName();
+    if (name == null || name.trim() === "") {
+        return reply.badRequest("name is required");
+    }
+
     // step 2: 查询 oss_path
     const basePath = await helper.queryContentOssPath(articleId);
     if (basePath == null) {
@@ -264,7 +281,7 @@ export const PostMarkdown = async function (
     const result = await helper.uploadOss(objectKey, fileBuffer);
 
     // step 5: 创建 Markdown 记录
-    await helper.createMarkdownRecord(articleId, objectKey, language);
+    await helper.createMarkdownRecord(articleId, objectKey, language, name);
 
     const sort = await helper.getSort();
     if (sort == null) {

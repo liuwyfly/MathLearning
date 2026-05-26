@@ -48,6 +48,7 @@ model ContentsArticle {
 
 model Markdown {
   id         Int    @id @default(autoincrement()) @db.UnsignedInt
+  name       String @default("") @db.VarChar(256)
   oss_path   String @db.VarChar(352)
   article_id Int    @db.UnsignedInt
   sort       Float  @default(0) @db.Float
