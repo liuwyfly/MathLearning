@@ -11,6 +11,7 @@ import { MarkdownFilter } from "./markdownFilter";
 import { MarkdownValidator } from "./markdownValidator";
 import OSS from "ali-oss";
 import { prismaLocalNow } from "../../../common/timeUtil";
+import { LANGUAGE_ZH_CN, LANGUAGE_EN_US } from "../../../common/constants";
 
 
 type PostMarkdownResponse = {
@@ -236,6 +237,11 @@ export const PostMarkdown = async function (
     }
 
     const language = await helper.getLanguage();
+    if (language !== LANGUAGE_ZH_CN && language !== LANGUAGE_EN_US) {
+        return reply.badRequest(
+            `language must be ${LANGUAGE_ZH_CN} or ${LANGUAGE_EN_US}`,
+        );
+    }
 
     // step 2: 查询 oss_path
     const basePath = await helper.queryContentOssPath(articleId);
