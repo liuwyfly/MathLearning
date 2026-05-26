@@ -1,5 +1,6 @@
 import { type FastifyPluginAsync } from 'fastify'
 import { GetContents } from './contentsViews'
+import { GetArticles } from './articlesViews'
 
 const mathLearning: FastifyPluginAsync = async (fastify): Promise<void> => {
     // ping
@@ -9,6 +10,9 @@ const mathLearning: FastifyPluginAsync = async (fastify): Promise<void> => {
     
     // 获取主目录
     fastify.get('/contents', GetContents)
+
+    // 获取文章列表
+    fastify.get('/articles', GetArticles)
 }
 
 export default mathLearning
