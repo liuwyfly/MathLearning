@@ -1,6 +1,7 @@
 import { type FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { pagination } from '../common/pagination'
 import { LANGUAGE_EN_US } from '../common/constants';
+import { normalizeLanguage } from '../common/language';
 
 export type ArticleListQuery = {
     contents_id?: string;
@@ -13,7 +14,8 @@ export const GetArticles = async function (
     reply: FastifyReply,
 ): Promise<any> {
     try {
-        const { contents_id, language } = request.query as ArticleListQuery;
+        const { contents_id, language: rawLanguage } = request.query as ArticleListQuery;
+        const language = normalizeLanguage(rawLanguage);
         const { page: p, page_size: ps } = pagination(request);
         const offset = (p - 1) * ps;
 
@@ -81,4 +83,36 @@ export const GetArticles = async function (
         this.log.error({ err }, 'query articles failed')
         return reply.internalServerError('query articles failed')
     }
+}
+
+export const GetArticleById = async function (
+    this: FastifyInstance,
+    request: FastifyRequest,
+    reply: FastifyReply,
+): Promise<any> {
+    const { id } = request.params as { id: string };
+    const language = normalizeLanguage((request.query as ArticleListQuery).language);
+    const articleId = Number(id);
+
+    const markdowns = await this.prisma.markdown.findMany({
+        where: {
+            article_id: articleId,
+            language: language,
+        },
+        orderBy: {
+            sort: 'asc',
+        },
+        select: {
+            id: true,
+            oss_path: true,
+        },
+    });
+
+    return reply.send({
+        id: articleId,
+        md_list: markdowns.map((md) => ({
+            id: md.id,
+            url: md.oss_path,
+        })),
+    })
 }
