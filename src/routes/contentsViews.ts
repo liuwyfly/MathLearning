@@ -13,7 +13,10 @@ export type ContentRow = {
 export const GetContents = async function (this: FastifyInstance, _request: FastifyRequest, reply: FastifyReply): Promise<{ data: ContentRow[] } | never> {
 	try {
 		const rows = await this.prisma.contents.findMany({
-			orderBy: { id: 'asc' },
+			orderBy: [ 
+				{sort: "asc"}, 
+				{id: "desc"} 
+			],
 			select: { id: true, name: true, name_en: true }
 		})
 		return { data: rows }
