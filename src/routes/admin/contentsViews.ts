@@ -147,7 +147,10 @@ export const GetContents = async function (
 
     try {
         const rows = await this.prisma.contents.findMany({
-            orderBy: { id: "asc" },
+            orderBy: [
+                { sort: "asc" },
+                { id: "desc" },
+            ],
         });
 
         return { data: rows };
