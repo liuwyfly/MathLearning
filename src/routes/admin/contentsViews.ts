@@ -19,11 +19,6 @@ export type PostContentBody = {
     sort?: number;
 };
 
-type ContentBody = {
-    name?: unknown;
-    name_en?: unknown;
-};
-
 export const postContentBodySchema = {
     type: "object" as const,
     required: ["name"],
@@ -42,6 +37,35 @@ export const postContentBodySchema = {
         sort: {
             type: "number" as const,
             default: 0.0,
+        },
+    },
+    additionalProperties: false,
+} as const;
+
+export type PutContentBody = {
+    name: string;
+    name_en: string;
+    sort: number;
+};
+
+export const putContentBodySchema = {
+    type: "object" as const,
+    required: ["name", "name_en", "sort"],
+    properties: {
+        name: {
+            type: "string" as const,
+            minLength: 1,
+            maxLength: 256,
+            errorMessage: { maxLength: "名称不能超过256个字符" },
+        },
+        name_en: {
+            type: "string" as const,
+            minLength: 1,
+            maxLength: 256,
+            errorMessage: { maxLength: "英文名称不能超过256个字符" },
+        },
+        sort: {
+            type: "number" as const,
         },
     },
     additionalProperties: false,
@@ -171,7 +195,7 @@ export const PutContent = async function (
         return reply.badRequest("id must be a positive integer") as never;
     }
 
-    const { name, name_en: nameEnRaw } = request.body as ContentBody;
+    const { name, name_en: nameEnRaw, sort } = request.body as PutContentBody;
     if (typeof name !== "string" || name.trim() === "") {
         return reply.badRequest("name is required") as never;
     }
@@ -189,6 +213,7 @@ export const PutContent = async function (
             data: {
                 name: normalizedName,
                 name_en: normalizedNameEn,
+                sort: sort,
                 updated_at: prismaLocalNow(),
             },
         });

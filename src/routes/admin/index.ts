@@ -6,7 +6,9 @@ import {
     PutContent,
     DeleteContent,
     PostContentBody,
+    PutContentBody,
     postContentBodySchema,
+    putContentBodySchema,
 } from "./contentsViews";
 
 const mathLearningAdmin: FastifyPluginAsync = async (
@@ -31,9 +33,12 @@ const mathLearningAdmin: FastifyPluginAsync = async (
         PostContent,
     );
     // 更新主目录
-    fastify.put(
+    fastify.put<{ Body: PutContentBody }>(
         "/contents/:id",
-        { onRequest: [fastify.authenticate] },
+        {
+            onRequest: [fastify.authenticate],
+            schema: { body: putContentBodySchema },
+        },
         PutContent,
     );
     // 删除主目录
