@@ -1,10 +1,13 @@
 import { type FastifyReply, FastifyRequest, FastifyInstance } from "fastify";
 import { prismaLocalNow } from "../../common/timeUtil";
 
+const OSS_PATH_PATTERN = "^\\/.*[^\\/]$";
+
 type ContentRow = {
     id: number;
     name: string;
     name_en: string | null;
+    oss_path: string | null;
     created_at: Date;
     updated_at: Date;
 };
@@ -16,6 +19,7 @@ type ContentParams = {
 export type PostContentBody = {
     name: string;
     name_en?: string;
+    oss_path?: string;
     sort?: number;
 };
 
@@ -34,6 +38,15 @@ export const postContentBodySchema = {
             maxLength: 256,
             errorMessage: { maxLength: "英文名称不能超过256个字符" },
         },
+        oss_path: {
+            type: "string" as const,
+            pattern: OSS_PATH_PATTERN,
+            maxLength: 256,
+            errorMessage: {
+                maxLength: "资源路径不能超过256个字符",
+                pattern: "资源路径必须以/开头且不能以/结尾",
+            },
+        },
         sort: {
             type: "number" as const,
             default: 0.0,
@@ -45,6 +58,7 @@ export const postContentBodySchema = {
 export type PutContentBody = {
     name: string;
     name_en: string;
+    oss_path?: string;
     sort: number;
 };
 
@@ -63,6 +77,15 @@ export const putContentBodySchema = {
             minLength: 1,
             maxLength: 256,
             errorMessage: { maxLength: "英文名称不能超过256个字符" },
+        },
+        oss_path: {
+            type: "string" as const,
+            pattern: OSS_PATH_PATTERN,
+            maxLength: 256,
+            errorMessage: {
+                maxLength: "资源路径不能超过256个字符",
+                pattern: "资源路径必须以/开头且不能以/结尾",
+            },
         },
         sort: {
             type: "number" as const,
@@ -90,6 +113,22 @@ function normalizeNameEn(nameEn: unknown): string | null {
     }
 
     return nameEn.trim();
+}
+
+function normalizeOssPath(ossPath: unknown): string | null {
+    if (ossPath == null) {
+        return null;
+    }
+
+    if (typeof ossPath !== "string") {
+        return null;
+    }
+
+    return ossPath.trim();
+}
+
+function isValidOssPath(ossPath: string): boolean {
+    return /^\/.*[^/]$/.test(ossPath);
 }
 
 export const GetContents = async function (
@@ -152,7 +191,12 @@ export const PostContent = async function (
     const uid = (request.user as Record<string, unknown> | undefined)?.uid;
     this.log.info({ uid }, "jwt decoded uid");
 
-    const { name, name_en: nameEnRaw, sort } = request.body as PostContentBody;
+    const {
+        name,
+        name_en: nameEnRaw,
+        oss_path: ossPathRaw,
+        sort,
+    } = request.body as PostContentBody;
     if (typeof name !== "string" || name.trim() === "") {
         return reply.badRequest("name is required") as never;
     }
@@ -161,8 +205,18 @@ export const PostContent = async function (
         return reply.badRequest("name_en must be a string") as never;
     }
 
+    if (ossPathRaw != null && typeof ossPathRaw !== "string") {
+        return reply.badRequest("oss_path must be a string") as never;
+    }
+
     const normalizedName = name.trim();
     const normalizedNameEn = normalizeNameEn(nameEnRaw);
+    const normalizedOssPath = normalizeOssPath(ossPathRaw);
+
+    if (normalizedOssPath != null && !isValidOssPath(normalizedOssPath)) {
+        return reply.badRequest("oss_path must start with / and not end with /") as never;
+    }
+
     const sortValue = typeof sort === "number" ? sort : 0;
 
     try {
@@ -171,6 +225,7 @@ export const PostContent = async function (
             data: {
                 name: normalizedName,
                 name_en: normalizedNameEn,
+                oss_path: normalizedOssPath,
                 sort: sortValue,
                 created_at: now,
                 updated_at: now,
@@ -195,7 +250,12 @@ export const PutContent = async function (
         return reply.badRequest("id must be a positive integer") as never;
     }
 
-    const { name, name_en: nameEnRaw, sort } = request.body as PutContentBody;
+    const {
+        name,
+        name_en: nameEnRaw,
+        oss_path: ossPathRaw,
+        sort,
+    } = request.body as PutContentBody;
     if (typeof name !== "string" || name.trim() === "") {
         return reply.badRequest("name is required") as never;
     }
@@ -204,8 +264,17 @@ export const PutContent = async function (
         return reply.badRequest("name_en must be a string") as never;
     }
 
+    if (ossPathRaw != null && typeof ossPathRaw !== "string") {
+        return reply.badRequest("oss_path must be a string") as never;
+    }
+
     const normalizedName = name.trim();
     const normalizedNameEn = normalizeNameEn(nameEnRaw);
+    const normalizedOssPath = normalizeOssPath(ossPathRaw);
+
+    if (normalizedOssPath != null && !isValidOssPath(normalizedOssPath)) {
+        return reply.badRequest("oss_path must start with / and not end with /") as never;
+    }
 
     try {
         const updateResult = await this.prisma.contents.updateMany({
@@ -213,6 +282,7 @@ export const PutContent = async function (
             data: {
                 name: normalizedName,
                 name_en: normalizedNameEn,
+                oss_path: normalizedOssPath,
                 sort: sort,
                 updated_at: prismaLocalNow(),
             },
