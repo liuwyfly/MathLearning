@@ -336,3 +336,30 @@ export const DeleteProblem = async function (
         message: "Problem deleted successfully",
     });
 };
+
+export const GetProblemDetail = async function (
+    this: FastifyInstance,
+    request: FastifyRequest,
+    reply: FastifyReply,
+): Promise<any> {
+    await AuthorizeByRole(this, request, [ROLE_CONTENT_ADMIN]);
+
+    const { id } = request.params as ProblemParams;
+    const problemId = parseInt(id);
+    if (isNaN(problemId)) {
+        return reply
+            .status(400)
+            .send({ success: false, message: "Invalid problem id" });
+    }
+
+    const problem = await this.prisma.problem.findUnique({
+        where: { id: problemId },
+    });
+    if (!problem) {
+        return reply
+            .status(404)
+            .send({ success: false, message: "Problem not found" });
+    }
+
+    return reply.send({ success: true, data: problem });
+};

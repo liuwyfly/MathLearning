@@ -18,6 +18,7 @@ import {
 import { PostMarkdown, GetMarkdownList, DeleteMarkdown } from "./markdownViews";
 import {
     GetProblemList,
+    GetProblemDetail,
     PostProblem,
     PutProblem,
     DeleteProblem,
@@ -123,6 +124,12 @@ const articles: FastifyPluginAsync = async (fastify): Promise<void> => {
         },
         PostProblem,
     );
+
+    // 根据 problem id 获取 Problem 详情
+    fastify.get<{ Params: ProblemParams }>("/problem/:id", {
+        onRequest: [fastify.authenticate],
+        schema: { params: problemIdParamsSchema },
+    }, GetProblemDetail);
 
     // 修改 Problem
     fastify.put<{ Params: ProblemParams; Body: PutProblemBody }>(
