@@ -16,6 +16,18 @@ import {
     ArticleDetailSchema,
 } from "./articlesViews";
 import { PostMarkdown, GetMarkdownList, DeleteMarkdown } from "./markdownViews";
+import {
+    GetProblemList,
+    PostProblem,
+    PutProblem,
+    DeleteProblem,
+    type PostProblemBody,
+    type PutProblemBody,
+    type ProblemParams,
+    problemIdParamsSchema,
+    postProblemBodySchema,
+    putProblemBodySchema,
+} from "./problemViews";
 
 const articles: FastifyPluginAsync = async (fastify): Promise<void> => {
     // 获取文章列表
@@ -93,6 +105,46 @@ const articles: FastifyPluginAsync = async (fastify): Promise<void> => {
         "/markdown/:id",
         { onRequest: [fastify.authenticate] },
         DeleteMarkdown,
+    );
+
+    // 查询 Problem 列表
+    fastify.get(
+        "/problem_list",
+        { onRequest: [fastify.authenticate] },
+        GetProblemList,
+    );
+
+    // 创建 Problem
+    fastify.post<{ Body: PostProblemBody }>(
+        "/problem",
+        {
+            onRequest: [fastify.authenticate],
+            schema: { body: postProblemBodySchema },
+        },
+        PostProblem,
+    );
+
+    // 修改 Problem
+    fastify.put<{ Params: ProblemParams; Body: PutProblemBody }>(
+        "/problem/:id",
+        {
+            onRequest: [fastify.authenticate],
+            schema: {
+                params: problemIdParamsSchema,
+                body: putProblemBodySchema,
+            },
+        },
+        PutProblem,
+    );
+
+    // 删除 Problem
+    fastify.delete<{ Params: ProblemParams }>(
+        "/problem/:id",
+        {
+            onRequest: [fastify.authenticate],
+            schema: { params: problemIdParamsSchema },
+        },
+        DeleteProblem,
     );
 };
 

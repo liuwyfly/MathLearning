@@ -11,7 +11,7 @@ import { MarkdownFilter } from "./markdownFilter";
 import { MarkdownValidator } from "./markdownValidator";
 import OSS from "ali-oss";
 import { prismaLocalNow } from "../../../common/timeUtil";
-import { LANGUAGE_ZH_CN, LANGUAGE_EN_US } from "../../../common/constants";
+import { LANGUAGE_ZH_CN, LANGUAGE_EN_US, ROLE_CONTENT_ADMIN } from "../../../common/constants";
 
 
 type PostMarkdownResponse = {
@@ -352,7 +352,7 @@ export const DeleteMarkdown = async function (
     request: FastifyRequest,
     reply: FastifyReply,
 ): Promise<any> {
-    await AuthorizeByRole(this, request, ["content_admin"]);
+    await AuthorizeByRole(this, request, [ROLE_CONTENT_ADMIN]);
 
     const { id } = request.params as { id: string };
     const markdownId = parseInt(id);
