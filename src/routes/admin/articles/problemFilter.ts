@@ -45,7 +45,6 @@ export class ProblemFilter {
                 id: true,
                 title: true,
                 math_text: true,
-                images: true,
                 answer: true,
                 language: true,
                 sort: true,

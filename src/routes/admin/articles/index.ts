@@ -22,6 +22,8 @@ import {
     PostProblem,
     PutProblem,
     DeleteProblem,
+    PostProblemImage,
+    DeleteProblemImage,
     type PostProblemBody,
     type PutProblemBody,
     type ProblemParams,
@@ -152,6 +154,23 @@ const articles: FastifyPluginAsync = async (fastify): Promise<void> => {
             schema: { params: problemIdParamsSchema },
         },
         DeleteProblem,
+    );
+
+    // 上传 习题图片 Problem Image
+    fastify.post(
+        "/problem_image",
+        { onRequest: [fastify.authenticate] },
+        PostProblemImage,
+    );
+
+    // 按照 id 删除 Problem Image
+    fastify.delete<{ Params: ProblemParams }>(
+        "/problem_image/:id",
+        {
+            onRequest: [fastify.authenticate],
+            schema: { params: problemIdParamsSchema },
+        },
+        DeleteProblemImage,
     );
 };
 
