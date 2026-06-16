@@ -35,14 +35,12 @@ class PostMarkdownHelper {
         sort: number | null;
         filename: string | null;
         language: string;
-        name: string;
         fileBuffer: Buffer | null;
     } = {
         articleId: null,
         sort: null,
         filename: null,
         language: "",
-        name: "",
         fileBuffer: null,
     };
 
@@ -97,10 +95,6 @@ class PostMarkdownHelper {
             if (part.fieldname === "language") {
                 this.multipartData.language = String(part.value ?? "");
             }
-
-            if (part.fieldname === "name") {
-                this.multipartData.name = String(part.value ?? "");
-            }
         }
     }
 
@@ -117,7 +111,8 @@ class PostMarkdownHelper {
     }
 
     async getName(): Promise<string> {
-        return this.multipartData.name;
+        // name 字段直接用 filename 来代替
+        return this.multipartData.filename ?? "";
     }
 
     async getFilename(): Promise<string | null> {
