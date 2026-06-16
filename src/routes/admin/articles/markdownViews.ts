@@ -23,6 +23,8 @@ type PostMarkdownResponse = {
     result: unknown;
 };
 
+const MARKDOWN_FILENAME_REGEX = /^[A-Za-z0-9_]+\.md$/;
+
 
 class PostMarkdownHelper {
     private fastify: FastifyInstance;
@@ -236,6 +238,11 @@ export const PostMarkdown = async function (
     const filename = await helper.getFilename();
     if (filename == null || filename.trim() === "") {
         return reply.badRequest("file filename is required");
+    }
+    if (!MARKDOWN_FILENAME_REGEX.test(filename)) {
+        return reply.badRequest(
+            "filename must contain only letters, numbers, underscore, and end with .md",
+        );
     }
 
     const fileBuffer = await helper.getFileBuffer();
