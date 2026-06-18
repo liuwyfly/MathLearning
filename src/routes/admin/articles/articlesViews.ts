@@ -124,7 +124,7 @@ export const GetArticles = async function (
             FROM mathlearning_article a
             INNER JOIN mathlearning_contents_articles ca ON a.id = ca.article_id
             WHERE ca.contents_id = ${cid}
-            ORDER BY a.id DESC
+            ORDER BY ca.article_sort ASC, a.id DESC
             LIMIT ${ps} OFFSET ${offset}
         `;
         countPromise = this.prisma.$queryRaw`
