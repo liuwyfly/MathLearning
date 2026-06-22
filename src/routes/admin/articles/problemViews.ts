@@ -3,8 +3,7 @@ import { type FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import OSS from "ali-oss";
 import { AuthorizeByRole } from "../../../common/auth";
 import {
-    LANGUAGE_ZH_CN,
-    LANGUAGE_EN_US,
+    LANGUAGE_LIST,
     ROLE_CONTENT_ADMIN,
     IMAGE_BASE_URL,
 } from "../../../common/constants";
@@ -81,9 +80,9 @@ export const postProblemBodySchema = {
         },
         language: {
             type: "string",
-            enum: [LANGUAGE_ZH_CN, LANGUAGE_EN_US],
+            enum: LANGUAGE_LIST,
             errorMessage: {
-                enum: `language must be ${LANGUAGE_ZH_CN} or ${LANGUAGE_EN_US}`,
+                enum: `language must be one of ${LANGUAGE_LIST.join(", ")}`,
             },
         },
         sort: {
@@ -117,9 +116,9 @@ export const putProblemBodySchema = {
         },
         language: {
             type: "string",
-            enum: [LANGUAGE_ZH_CN, LANGUAGE_EN_US],
+            enum: LANGUAGE_LIST,
             errorMessage: {
-                enum: `language must be ${LANGUAGE_ZH_CN} or ${LANGUAGE_EN_US}`,
+                enum: `language must be one of ${LANGUAGE_LIST.join(", ")}`,
             },
         },
         sort: {
@@ -252,12 +251,10 @@ export const PutProblem = async function (
     } = request.body as PutProblemBody;
 
     if (
-        language !== undefined &&
-        language !== LANGUAGE_ZH_CN &&
-        language !== LANGUAGE_EN_US
+        language !== undefined && !LANGUAGE_LIST.includes(language)
     ) {
         return reply.badRequest(
-            `language must be ${LANGUAGE_ZH_CN} or ${LANGUAGE_EN_US}`,
+            `language must be one of ${LANGUAGE_LIST.join(", ")}`,
         );
     }
 
