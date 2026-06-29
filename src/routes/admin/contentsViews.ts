@@ -127,6 +127,7 @@ function normalizeOssPath(ossPath: unknown): string | null {
     return ossPath.trim();
 }
 
+// 验证 oss_path 是否符合要求：以 / 开头且不以 / 结尾
 function isValidOssPath(ossPath: string): boolean {
     return /^\/.*[^/]$/.test(ossPath);
 }

@@ -94,19 +94,26 @@ export const GetArticleById = async function (
     const language = normalizeLanguage((request.query as ArticleListQuery).language);
     const articleId = Number(id);
 
-    const markdowns = await this.prisma.markdown.findMany({
-        where: {
-            article_id: articleId,
-            language: language,
-        },
-        orderBy: {
-            sort: 'asc',
-        },
-        select: {
-            id: true,
-            oss_path: true,
-        },
-    });
+    const [markdowns, problemCount] = await Promise.all([
+        this.prisma.markdown.findMany({
+            where: {
+                article_id: articleId,
+                language: language,
+            },
+            orderBy: {
+                sort: 'asc',
+            },
+            select: {
+                id: true,
+                oss_path: true,
+            },
+        }),
+        this.prisma.problem.count({
+            where: {
+                article_id: articleId,
+            },
+        }),
+    ]);
 
     return reply.send({
         id: articleId,
@@ -114,5 +121,6 @@ export const GetArticleById = async function (
             id: md.id,
             url: md.oss_path,
         })),
+        has_problems: problemCount > 0,
     })
 }
