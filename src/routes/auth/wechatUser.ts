@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import type { PrismaClient, Prisma, WeixinUser } from '../../generated/prisma-client'
+import { prismaLocalNow } from '../../common/timeUtil'
 
 export type WechatUserWithProfile = Prisma.WeixinUserGetPayload<{ include: { user: true } }>
 
@@ -18,13 +19,16 @@ export async function findOrCreateWechatUser (
   openid: string,
   unionid?: string | null
 ): Promise<WechatUserWithProfile> {
+  const now = prismaLocalNow()
   return prisma.weixinUser.upsert({
     where: { openid },
-    update: unionid ? { unionid } : {},
+    update: unionid ? { unionid, updated_at: now } : {},
     create: {
       openid,
       unionid: unionid ?? null,
-      user: { create: { uid: randomUUID().replace(/-/g, '') } }
+      created_at: now,
+      updated_at: now,
+      user: { create: { uid: randomUUID().replace(/-/g, ''), createdAt: now, updatedAt: now } }
     },
     include: { user: true }
   })
