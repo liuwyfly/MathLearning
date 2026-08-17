@@ -2,11 +2,12 @@ import { type FastifyPluginAsync } from 'fastify'
 import { GetContents, type GetContentsQuery, getContentsQuerySchema } from './contentsViews'
 import { GetArticles, GetArticleById } from './articlesViews'
 import { GetProblems } from './problemsViews'
+import { randomUUID } from 'node:crypto'
 
 const mathLearning: FastifyPluginAsync = async (fastify): Promise<void> => {
     // ping
     fastify.get('/ping', async function (request, reply) {
-        return { pong: true, message: "math-learning" }
+        return { pong: true, message: "math-learning " + randomUUID() }
     })
     
     // 获取主目录

@@ -37,7 +37,7 @@ import type { FastifyPluginAsync } from "fastify";
 
 // Singleton instance
 let prismaInstance: PrismaClient | null = null;
-let isConnecting = false;
+let prismaInitialization: Promise<PrismaClient> | null = null;
 
 const toPositiveInt = (
     value: string | null | undefined,
@@ -55,17 +55,11 @@ const getPrismaClient = async (): Promise<PrismaClient> => {
         return prismaInstance;
     }
 
-    // Prevent multiple simultaneous initialization attempts
-    if (isConnecting) {
-        while (!prismaInstance) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-        return prismaInstance;
+    if (prismaInitialization) {
+        return prismaInitialization;
     }
 
-    isConnecting = true;
-
-    try {
+    prismaInitialization = (async () => {
         const databaseUrl = process.env.DATABASE_URL;
         if (!databaseUrl) {
             throw new Error(
@@ -161,8 +155,13 @@ const getPrismaClient = async (): Promise<PrismaClient> => {
 
         prismaInstance = newClient;
         return prismaInstance;
-    } finally {
-        isConnecting = false;
+    })();
+
+    try {
+        return await prismaInitialization;
+    } catch (error) {
+        prismaInitialization = null;
+        throw error;
     }
 };
 
