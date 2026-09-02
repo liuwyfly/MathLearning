@@ -4,6 +4,7 @@ import { LANGUAGE_LIST, LANGUAGE_EN_US } from '../common/constants'
 export type ContentRow = {
 	id: number
 	name: string
+	icon_path: string | null
 }
 
 export type GetContentsQuery = {
@@ -31,12 +32,13 @@ export const GetContents = async function (this: FastifyInstance, request: Fasti
 				{sort: "asc"},
 				{id: "desc"}
 			],
-			select: { id: true, name: true, name_en: true }
+			select: { id: true, name: true, name_en: true, icon_path: true }
 		})
 
 		const data: ContentRow[] = rows.map(row => ({
 			id: row.id,
-			name: language === LANGUAGE_EN_US ? (row.name_en ?? row.name) : row.name
+			name: language === LANGUAGE_EN_US ? (row.name_en ?? row.name) : row.name,
+			icon_path: row.icon_path
 		}))
 
 		return { data }
