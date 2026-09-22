@@ -2,7 +2,7 @@ import { createHmac } from 'node:crypto'
 
 import { serviceRequest } from './httpClient'
 
-const MQ_SERVICE_URL = process.env.MQ_SERVICE_URL ?? 'http://math-mq:3000'
+const MQ_SERVICE_URL = process.env.HT_RABBITMQ_SERVICE ?? 'http://ht-rabbit-mq:3000'
 
 export type MqParam = Record<string, unknown> | null | undefined
 export type MqLogger = { info: (...args: unknown[]) => void }
@@ -37,7 +37,7 @@ function createMqServiceJwt(): string {
 }
 
 /**
- * 向 math-mq 服务发送消息，topic 不能为空，param 应为对象。
+ * 向 ht-rabbit-mq 服务发送消息，topic 不能为空，param 应为对象。
  * 实际请求体为：{ topic, param: { ... } }
  */
 export async function SendMqMessage(
