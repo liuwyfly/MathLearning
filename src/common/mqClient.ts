@@ -2,7 +2,8 @@ import { createHmac } from 'node:crypto'
 
 import { serviceRequest } from './httpClient'
 
-const MQ_SERVICE_URL = process.env.HT_RABBITMQ_SERVICE ?? 'http://ht-rabbit-mq:3000'
+const MQ_SERVICE_HOST = process.env.HT_RABBITMQ_SERVICE ?? 'http://ht-rabbit-mq:3000'
+const MQ_SEND_PATH = '/ht_rabbit_mq/send'
 
 export type MqParam = Record<string, unknown> | null | undefined
 export type MqLogger = { info: (...args: unknown[]) => void }
@@ -52,7 +53,8 @@ export async function SendMqMessage(
   const jwtStr = createMqServiceJwt()
   logger.info({ topic, param, jwtStr }, 'SendMqMessage debug')
 
-  const response = await serviceRequest(MQ_SERVICE_URL, {
+  const url = `${MQ_SERVICE_HOST.replace(/\/+$/, '')}${MQ_SEND_PATH}`
+  const response = await serviceRequest(url, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -62,7 +64,7 @@ export async function SendMqMessage(
   })
 
   if (!response.ok) {
-    throw new Error(`SendMqMessage: math-mq 服务响应异常 status=${response.status}`)
+    throw new Error(`SendMqMessage: ht-rabbit-mq 服务响应异常 status=${response.status}`)
   }
 
   return response
