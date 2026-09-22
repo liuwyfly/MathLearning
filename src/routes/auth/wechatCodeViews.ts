@@ -31,6 +31,10 @@ export async function wechatCodeHandler (
   reply: FastifyReply
 ): Promise<void> {
   const { code } = request.body
+  const forwardedFor = request.headers['x-forwarded-for']
+  const clientIp = forwardedFor
+    ? String(forwardedFor).split(',')[0].trim()
+    : request.ip
 
   const appid = process.env.WECHAT_APP_ID
   const secret = process.env.WECHAT_APP_SECRET
@@ -49,9 +53,30 @@ export async function wechatCodeHandler (
   try {
     const res = await fetch(url)
     data = await res.json() as WxAccessTokenResponse
-    this.log.info({ code, data }, 'wechat oauth2 debug info')
+
+    // 登录信息，记录日志
+    this.log.info({ code, data, ip: clientIp }, 'wechat oauth2 debug info')
+    // 发 rocketmq 消息（失败不阻断登录）
+    // 服务名: ht_rabbit_mq, 路径: /ht_rabbit_mq/send, POST 请求
+
+    try {
+      await this.sendMqMessage(
+        'UserTopic',
+        {
+          key: 'WechatSignin',
+          open_id: data.openid,
+          union_id: data.unionid,
+          user_id: undefined,
+          time: Date.now().toString(),
+          client_ip: clientIp
+        }
+      )
+    } catch (mqErr) {
+      request.log.warn({ err: mqErr, ip: clientIp }, 'send login mq message failed')
+    }
+    
   } catch (err) {
-    request.log.error(err, 'wechat access_token request failed')
+    request.log.error({ err, ip: clientIp }, 'wechat access_token request failed')
     return reply.code(502).send({ error: 'Failed to request WeChat access_token' })
   }
 
@@ -64,7 +89,7 @@ export async function wechatCodeHandler (
   try {
     wechatUser = await findOrCreateWechatUser(this.prisma, data.openid, data.unionid)
   } catch (err) {
-    request.log.error(err, 'wechat user upsert failed')
+    request.log.error({ err, ip: clientIp }, 'wechat user upsert failed')
     return reply.code(502).send({ error: 'Failed to query or create wechat user' })
   }
 
@@ -76,12 +101,12 @@ export async function wechatCodeHandler (
       profile = { ...wechatUser, ...updated }
     }
   } catch (err) {
-    request.log.warn(err, 'wechat userinfo request failed')
+    request.log.warn({ err, ip: clientIp }, 'wechat userinfo request failed')
   }
 
   return reply.send({
-    access_token: data.access_token,
     expires_in: data.expires_in,
+    access_token: data.access_token,
     refresh_token: data.refresh_token,
     openid: data.openid,
     scope: data.scope,
