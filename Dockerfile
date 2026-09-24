@@ -1,6 +1,6 @@
 # Multi-stage build for Fastify TypeScript app
 
-ARG NODE_VERSION=ht-repo-registry.cn-heyuan.cr.aliyuncs.com/ht-elite/node:24-alpine3.24
+ARG NODE_VERSION=node:24-alpine3.24
 
 # npm registry mirror; override with --build-arg NPM_REGISTRY=... when needed
 ARG NPM_REGISTRY=https://registry.npmmirror.com
