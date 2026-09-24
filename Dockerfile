@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 # Multi-stage build for Fastify TypeScript app
 
 ARG NODE_VERSION=ht-repo-registry.cn-heyuan.cr.aliyuncs.com/ht-elite/node:24-alpine3.24
