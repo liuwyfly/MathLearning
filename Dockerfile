@@ -3,16 +3,21 @@
 
 ARG NODE_VERSION=ht-repo-registry.cn-heyuan.cr.aliyuncs.com/ht-elite/node:24-alpine3.24
 
+# npm registry mirror; override with --build-arg NPM_REGISTRY=... when needed
+ARG NPM_REGISTRY=https://registry.npmmirror.com
+
 # ====================
 # Stage 1: Build
 # ====================
 FROM ${NODE_VERSION} AS builder
 
+ARG NPM_REGISTRY
+
 WORKDIR /app
 
 # Install dependencies
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --registry=${NPM_REGISTRY}
 
 # Copy source, generate Prisma client and build
 COPY . .
@@ -23,14 +28,20 @@ RUN npx prisma generate && npm run build:ts
 # ====================
 FROM ${NODE_VERSION} AS production
 
+ARG NPM_REGISTRY
+
+# Alpine apk mirror; override with --build-arg APK_MIRROR=... when needed
+ARG APK_MIRROR=https://mirrors.aliyun.com
+
 WORKDIR /app
 
 # Install production dependencies only
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --omit=dev --registry=${NPM_REGISTRY} && npm cache clean --force
 
 # Configure container timezone to Asia/Shanghai
-RUN apk add --no-cache tzdata && \
+RUN sed -i "s|https://dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories && \
+  apk add --no-cache tzdata && \
   ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && \
   echo "Asia/Shanghai" > /etc/timezone
 ENV TZ=Asia/Shanghai
