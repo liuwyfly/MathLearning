@@ -573,7 +573,7 @@ export const PostProblemImage = async function (
 ): Promise<PostProblemImageResponse | never> {
     await AuthorizeByRole(this, request, [ROLE_CONTENT_ADMIN]);
 
-    const user = request.user as { uid: number; username: string };
+    const user = request.user as unknown as { uid: number; username: string };
     this.log.info({ uid: user.uid }, "received problem image upload request");
 
     if (!request.isMultipart()) {

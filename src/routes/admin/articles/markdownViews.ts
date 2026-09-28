@@ -213,7 +213,7 @@ export const PostMarkdown = async function (
     // await request.jwtVerify();
     await AuthorizeByRole(this, request, ["content_admin"]);
 
-    const user = request.user as { uid: number; username: string };
+    const user = request.user as unknown as { uid: number; username: string };
     this.log.info({ uid: user.uid }, "received markdown upload request");
 
     // 目前仅支持 multipart/form-data 格式的请求

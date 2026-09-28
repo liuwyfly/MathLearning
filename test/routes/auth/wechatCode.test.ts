@@ -30,12 +30,27 @@ function jsonResponse (data: unknown): Response {
 // 所以这里要置为空字符串而不是 delete，否则会被 .env 重新填上。
 async function buildApp (t: Parameters<typeof build>[0]) {
   const oldPrefix = process.env.FASTIFY_ROUTE_PREFIX
+  const oldAppId = process.env.WECHAT_APP_ID
+  const oldSecret = process.env.WECHAT_APP_SECRET
   process.env.FASTIFY_ROUTE_PREFIX = ''
+  // 本地 .env 不一定配置微信参数，测试统一给占位值
+  process.env.WECHAT_APP_ID = 'test-appid'
+  process.env.WECHAT_APP_SECRET = 'test-secret'
   t.after(() => {
     if (oldPrefix == null) {
       delete process.env.FASTIFY_ROUTE_PREFIX
     } else {
       process.env.FASTIFY_ROUTE_PREFIX = oldPrefix
+    }
+    if (oldAppId == null) {
+      delete process.env.WECHAT_APP_ID
+    } else {
+      process.env.WECHAT_APP_ID = oldAppId
+    }
+    if (oldSecret == null) {
+      delete process.env.WECHAT_APP_SECRET
+    } else {
+      process.env.WECHAT_APP_SECRET = oldSecret
     }
   })
   return await build(t)
@@ -141,6 +156,12 @@ test('wechat_code 换取 token 成功并返回 token 和用户信息', async (t)
 
   assert.equal(res.statusCode, 200)
   const body = JSON.parse(res.payload)
+  assert.equal(typeof body.token, 'string')
+  assert.ok(body.token.length > 0)
+  const decoded = app.jwt.verify(body.token) as { uid: string; openid: string; exp: number }
+  assert.equal(decoded.uid, fakeWechatUser.user.uid)
+  assert.equal(decoded.openid, wxTokenData.openid)
+  assert.equal(typeof decoded.exp, 'number')
   assert.equal(body.access_token, wxTokenData.access_token)
   assert.equal(body.expires_in, wxTokenData.expires_in)
   assert.equal(body.refresh_token, wxTokenData.refresh_token)

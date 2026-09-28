@@ -21,7 +21,7 @@ export async function AuthorizeByRole(
     }
 
     // 打 log, uid 和 判断的角色
-    const user = request.user as { uid: string; username: string } | undefined;
+    const user = request.user as unknown as { uid: string; username: string } | undefined;
     fastify.log.info({ uid: user?.uid, requiredRoles }, "authorizing user with required roles");
 
     const authServiceUrl = process.env.AUTH_SERVICE_URL ?? "http://auth-serv:3000";

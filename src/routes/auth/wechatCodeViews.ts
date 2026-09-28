@@ -114,7 +114,13 @@ export async function wechatCodeHandler (
     request.log.warn({ err, ip: clientIp }, 'wechat userinfo request failed')
   }
 
+  const token = this.jwt.sign(
+    { uid: wechatUser.user.uid, openid: wechatUser.openid },
+    { expiresIn: process.env.JWT_EXPIRES_IN ?? '7d' }
+  )
+
   return reply.send({
+    token,
     expires_in: data.expires_in,
     access_token: data.access_token,
     refresh_token: data.refresh_token,

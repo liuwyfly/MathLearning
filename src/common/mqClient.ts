@@ -44,14 +44,14 @@ function createMqServiceJwt(): string {
 export async function SendMqMessage(
   topic: string,
   param: MqParam = {},
-  logger: MqLogger
+  logger?: MqLogger
 ): Promise<Response> {
   if (!topic || !topic.trim()) {
     throw new Error('SendMqMessage: topic 不能为空')
   }
 
   const jwtStr = createMqServiceJwt()
-  logger.info({ topic, param, jwtStr }, 'SendMqMessage debug')
+  logger?.info({ topic, param }, 'SendMqMessage debug')
 
   const url = `${MQ_SERVICE_HOST.replace(/\/+$/, '')}${MQ_SEND_PATH}`
   const response = await serviceRequest(url, {
