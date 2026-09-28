@@ -39,6 +39,9 @@ export async function wechatCodeHandler (
 ): Promise<void> {
   const { code } = request.body
   const forwardedFor = request.headers['x-forwarded-for']
+
+  this.log.info({ 'forwarded-for': forwardedFor, ip: request.ip }, 'wechat oauth2 debug x-forwarded-for')
+
   const clientIp = forwardedFor
     ? String(forwardedFor).split(',')[0].trim()
     : request.ip
