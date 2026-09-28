@@ -25,6 +25,13 @@ interface WxAccessTokenResponse {
   errmsg?: string
 }
 
+// 格式化为 本地时区的 "年-月-日 时:分:秒.毫秒"，如 2025-06-25 14:30:05.123
+function formatLocalDateTime (d: Date): string {
+  const pad = (n: number, len = 2): string => String(n).padStart(len, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
+    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`
+}
+
 export async function wechatCodeHandler (
   this: FastifyInstance,
   request: FastifyRequest<{ Body: WxCodeBody }>,
@@ -67,7 +74,7 @@ export async function wechatCodeHandler (
           open_id: data.openid,
           union_id: data.unionid,
           user_id: undefined,
-          time: Date.now().toString(),
+          time: formatLocalDateTime(new Date()),
           client_ip: clientIp
         }
       )
