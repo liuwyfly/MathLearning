@@ -20,6 +20,7 @@ export type PostContentBody = {
     name: string;
     name_en?: string;
     oss_path?: string;
+    enabled?: boolean;
     sort?: number;
 };
 
@@ -47,6 +48,10 @@ export const postContentBodySchema = {
                 pattern: "资源路径必须以/开头且不能以/结尾",
             },
         },
+        enabled: {
+            type: "boolean" as const,
+            default: true,
+        },
         sort: {
             type: "number" as const,
             default: 0.0,
@@ -59,12 +64,13 @@ export type PutContentBody = {
     name: string;
     name_en: string;
     oss_path?: string;
+    enabled: boolean;
     sort: number;
 };
 
 export const putContentBodySchema = {
     type: "object" as const,
-    required: ["name", "name_en", "sort"],
+    required: ["name", "name_en", "enabled", "sort"],
     properties: {
         name: {
             type: "string" as const,
@@ -86,6 +92,9 @@ export const putContentBodySchema = {
                 maxLength: "资源路径不能超过256个字符",
                 pattern: "资源路径必须以/开头且不能以/结尾",
             },
+        },
+        enabled: {
+            type: "boolean" as const,
         },
         sort: {
             type: "number" as const,
@@ -199,6 +208,7 @@ export const PostContent = async function (
         name,
         name_en: nameEnRaw,
         oss_path: ossPathRaw,
+        enabled,
         sort,
     } = request.body as PostContentBody;
     if (typeof name !== "string" || name.trim() === "") {
@@ -213,9 +223,14 @@ export const PostContent = async function (
         return reply.badRequest("oss_path must be a string") as never;
     }
 
+    if (enabled != null && typeof enabled !== "boolean") {
+        return reply.badRequest("enabled must be a boolean") as never;
+    }
+
     const normalizedName = name.trim();
     const normalizedNameEn = normalizeNameEn(nameEnRaw);
     const normalizedOssPath = normalizeOssPath(ossPathRaw);
+    const enabledValue = typeof enabled === "boolean" ? enabled : true;
 
     if (normalizedOssPath != null && !isValidOssPath(normalizedOssPath)) {
         return reply.badRequest("oss_path must start with / and not end with /") as never;
@@ -230,6 +245,7 @@ export const PostContent = async function (
                 name: normalizedName,
                 name_en: normalizedNameEn,
                 oss_path: normalizedOssPath,
+                enabled: enabledValue,
                 sort: sortValue,
                 created_at: now,
                 updated_at: now,
@@ -258,6 +274,7 @@ export const PutContent = async function (
         name,
         name_en: nameEnRaw,
         oss_path: ossPathRaw,
+        enabled,
         sort,
     } = request.body as PutContentBody;
     if (typeof name !== "string" || name.trim() === "") {
@@ -270,6 +287,10 @@ export const PutContent = async function (
 
     if (ossPathRaw != null && typeof ossPathRaw !== "string") {
         return reply.badRequest("oss_path must be a string") as never;
+    }
+
+    if (typeof enabled !== "boolean") {
+        return reply.badRequest("enabled must be a boolean") as never;
     }
 
     const normalizedName = name.trim();
@@ -287,6 +308,7 @@ export const PutContent = async function (
                 name: normalizedName,
                 name_en: normalizedNameEn,
                 oss_path: normalizedOssPath,
+                enabled: enabled,
                 sort: sort,
                 updated_at: prismaLocalNow(),
             },
