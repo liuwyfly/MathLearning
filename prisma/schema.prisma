@@ -120,3 +120,17 @@ model ProblemImage {
   @@index([problem_id], map: "idx_problem_image_problem_id")
   @@map("mathlearning_problem_image")
 }
+
+model Complaint {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  content    String   @db.Text
+  // Allowed values: USER_CLOSED, WAITING_FOR, REPLIED, PROCESSING
+  status     String   @db.VarChar(24)
+  user_id    Int      @db.UnsignedInt
+  created_at DateTime @default(now()) @db.DateTime(3)
+  updated_at DateTime @default(now()) @db.DateTime(3)
+
+  @@index([user_id], map: "idx_complaint_user_id")
+  @@map("mathlearning_complaint")
+}
+
