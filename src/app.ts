@@ -9,7 +9,8 @@ export interface AppOptions extends FastifyServerOptions, Partial<AutoloadPlugin
 }
 // Pass --options via CLI arguments in command to enable these options.
 const options: AppOptions = {
-  pluginTimeout: Number(process.env.FASTIFY_PLUGIN_TIMEOUT_MS ?? 20000)
+  pluginTimeout: Number(process.env.FASTIFY_PLUGIN_TIMEOUT_MS ?? 20000),
+  ignoreTrailingSlash: true
 }
 
 const ajv = new Ajv({

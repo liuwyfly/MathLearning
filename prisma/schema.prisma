@@ -126,11 +126,11 @@ model Complaint {
   content    String   @db.Text
   // Allowed values: USER_CLOSED, WAITING_FOR, REPLIED, PROCESSING
   status     String   @db.VarChar(24)
-  user_id    Int      @db.UnsignedInt
+  uid    String   @db.Char(36)
   created_at DateTime @default(now()) @db.DateTime(3)
   updated_at DateTime @default(now()) @db.DateTime(3)
 
-  @@index([user_id], map: "idx_complaint_user_id")
+  @@index([uid], map: "idx_complaint_user_id")
   @@map("mathlearning_complaint")
 }
 

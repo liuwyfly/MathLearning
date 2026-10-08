@@ -5,7 +5,7 @@ import { prismaLocalNow } from '../../common/timeUtil'
 type ComplaintRow = {
   id: number
   content: string
-  user_id: number
+  uid: string
   created_at: Date
   updated_at: Date
 }
@@ -63,17 +63,13 @@ function parseComplaintId (id: string): number | null {
 }
 
 // 根据 JWT 中的 uid 查询用户数字 id
-async function resolveUserId (fastify: FastifyInstance, request: FastifyRequest): Promise<number | null> {
+async function resolveUserId (_fastify: FastifyInstance, request: FastifyRequest): Promise<string | null> {
   const uid = (request.user as Record<string, unknown> | undefined)?.uid
-  if (typeof uid !== 'string' || uid === '') {
+  if (typeof uid !== 'string' || uid.trim() === '') {
     return null
   }
 
-  const user = await fastify.prisma.user.findUnique({
-    where: { uid }
-  })
-
-  return user?.id ?? null
+  return uid
 }
 
 // 获取当前用户的投诉列表
@@ -89,7 +85,7 @@ export const GetComplaints = async function (
     }
 
     const rows = await this.prisma.complaint.findMany({
-      where: { user_id: userId },
+      where: { uid: userId },
       orderBy: { id: 'desc' }
     })
 
@@ -101,6 +97,27 @@ export const GetComplaints = async function (
 }
 
 // 新建投诉
+/**
+ * 请求参数:
+ * {
+ *   "content": "我反馈一下题目第3题答案解析有误，请核对。"
+ * }
+
+ * 成功返回:
+ * {
+    "id": 2,
+    "content": "我反馈一下题目第3题答案解析有误，请核对。",
+    "status": "WAITING_FOR",
+    "uid": "420a8fc872644180b78ef1347a2c633c",
+    "created_at": "2026-10-08T17:35:38.336Z",
+    "updated_at": "2026-10-08T17:35:38.336Z"
+  }
+ 
+ * 失败返回:
+ * {
+ *   "error": "user not found"
+ * }
+ */
 export const PostComplaint = async function (
   this: FastifyInstance,
   request: FastifyRequest,
@@ -110,6 +127,9 @@ export const PostComplaint = async function (
   if (typeof content !== 'string' || content.trim() === '') {
     return reply.badRequest('content is required') as never
   }
+
+  const uid = request.user?.uid
+  this.log.info({ uid, content }, 'creating new complaint')
 
   try {
     const userId = await resolveUserId(this, request)
@@ -122,7 +142,7 @@ export const PostComplaint = async function (
       data: {
         content: content.trim(),
         status: COMPLAINT_STATUS_WAITING_FOR,
-        user_id: userId,
+        uid: userId,
         created_at: now,
         updated_at: now
       }
@@ -159,7 +179,7 @@ export const PutComplaint = async function (
     }
 
     const existedComplaint = await this.prisma.complaint.findFirst({
-      where: { id, user_id: userId }
+      where: { id, uid: userId }
     })
     if (existedComplaint == null) {
       return reply.notFound('complaint not found') as never
@@ -170,7 +190,7 @@ export const PutComplaint = async function (
     }
 
     const updateResult = await this.prisma.complaint.updateMany({
-      where: { id, user_id: userId },
+      where: { id, uid: userId },
       data: {
         content: content.trim(),
         updated_at: prismaLocalNow()
@@ -219,7 +239,7 @@ export const PatchComplaint = async function (
     }
 
     const existedComplaint = await this.prisma.complaint.findFirst({
-      where: { id, user_id: userId }
+      where: { id, uid: userId }
     })
     if (existedComplaint == null) {
       return reply.notFound('complaint not found') as never
@@ -237,7 +257,7 @@ export const PatchComplaint = async function (
     }
 
     const updateResult = await this.prisma.complaint.updateMany({
-      where: { id, user_id: userId },
+      where: { id, uid: userId },
       data
     })
 
