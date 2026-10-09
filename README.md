@@ -26,3 +26,9 @@ Run the test cases.
 ## Learn More
 
 To learn Fastify, check out the [Fastify documentation](https://fastify.dev/docs/latest/).
+
+## Development Configuration
+
+### Environment Variables
+
+config with .env file at root ( / ) path of the project

@@ -28,8 +28,8 @@ export type OssStsTokenResponse = {
 
 // 从环境变量读取 OSS STS 配置，缺任何一项视为未配置
 function loadStsConfig (): StsConfig | null {
-  const accessKeyId = process.env.ALIYUN_ACCESS_KEY_ID
-  const accessKeySecret = process.env.ALIYUN_ACCESS_KEY_SECRET
+  const accessKeyId = process.env.ALIYUN_CLIENT_OSS_ACCESS_KEY_ID
+  const accessKeySecret = process.env.ALIYUN_CLIENT_OSS_ACCESS_KEY_SECRET
   const roleArn = process.env.ALIYUN_OSS_ROLE_ARN
   const bucket = process.env.ALIYUN_OSS_BUCKET
   const region = process.env.ALIYUN_OSS_REGION
