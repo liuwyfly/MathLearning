@@ -1,5 +1,5 @@
 import { type FastifyReply, type FastifyRequest, type FastifyInstance } from 'fastify'
-import { COMPLAINT_STATUS_PROCESSING, COMPLAINT_STATUS_WAITING_FOR } from '../../common/constants'
+import { COMPLAINT_DAILY_LIMIT, COMPLAINT_STATUS_PROCESSING, COMPLAINT_STATUS_WAITING_FOR } from '../../common/constants'
 import { prismaLocalNow } from '../../common/timeUtil'
 
 type ComplaintRow = {
@@ -138,6 +138,28 @@ export const PostComplaint = async function (
     }
 
     const now = prismaLocalNow()
+
+    // 每人每天最多提交 COMPLAINT_DAILY_LIMIT 条投诉/反馈
+    // created_at 按 prismaLocalNow 的本地时钟面补偿存储，dayStart 做同样补偿以对齐
+    const realNow = new Date()
+    const offset = realNow.getTimezoneOffset() * 60000
+    const localMidnight = new Date(realNow.getFullYear(), realNow.getMonth(), realNow.getDate())
+    const dayStart = new Date(localMidnight.getTime() - offset)
+    this.log.info({ userId, dayStart }, 'checking daily complaint limit')
+
+    const todayCount = await this.prisma.complaint.count({
+      where: {
+        uid: userId,
+        created_at: { gte: dayStart }
+      }
+    })
+    if (todayCount >= COMPLAINT_DAILY_LIMIT) {
+      return reply.code(429).send({
+        error: `已达到每天提交的上限 Daily limit reached (${COMPLAINT_DAILY_LIMIT} per day)`,
+        code: 'COMPLAINT_DAILY_LIMIT_REACHED'
+      }) as never
+    }
+
     const createdRow = await this.prisma.complaint.create({
       data: {
         content: content.trim(),
