@@ -138,7 +138,12 @@ model Complaint {
 
 model ComplaintImage {
   id           Int       @id @default(autoincrement()) @db.UnsignedInt
+  // OSS objectKey（Bucket 内相对路径），如 mathink/feedback/20260625_123_01.jpg
   path         String    @db.VarChar(352)
+  // 客户端相册中的原始文件名
+  original_name String   @db.VarChar(255)
+  // 上传到 OSS 的文件名，如 20260625_123_01.jpg
+  filename     String    @db.VarChar(128)
   complaint_id Int       @db.UnsignedInt
   created_at   DateTime  @default(now()) @db.DateTime(3)
   updated_at   DateTime  @default(now()) @db.DateTime(3)

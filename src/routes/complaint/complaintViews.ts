@@ -53,6 +53,51 @@ export const patchComplaintBodySchema = {
   additionalProperties: false
 } as const
 
+// 投诉图片信息：客户端相册原文件名、上传到 OSS 的文件名、OSS objectKey
+export type PostComplaintImageItem = {
+  original_name: string
+  oss_filename: string
+  oss_path: string
+}
+
+export type PostComplaintImagesBody = {
+  images: PostComplaintImageItem[]
+}
+
+export const postComplaintImagesBodySchema = {
+  type: 'object',
+  required: ['images'],
+  properties: {
+    images: {
+      type: 'array',
+      minItems: 1,
+      maxItems: 9,
+      errorMessage: {
+        minItems: 'images 不能为空',
+        maxItems: 'images 一次最多 9 张'
+      },
+      items: {
+        type: 'object',
+        required: ['original_name', 'oss_filename', 'oss_path'],
+        properties: {
+          original_name: { type: 'string', minLength: 1, maxLength: 255 },
+          oss_filename: { type: 'string', minLength: 1, maxLength: 128 },
+          oss_path: { type: 'string', minLength: 1, maxLength: 352 }
+        },
+        additionalProperties: false,
+        errorMessage: {
+          required: {
+            original_name: 'original_name 不能为空',
+            oss_filename: 'oss_filename 不能为空',
+            oss_path: 'oss_path 不能为空'
+          }
+        }
+      }
+    }
+  },
+  additionalProperties: false
+} as const
+
 function parseComplaintId (id: string): number | null {
   const parsed = Number(id)
   if (!Number.isInteger(parsed) || parsed <= 0) {
@@ -299,5 +344,99 @@ export const PatchComplaint = async function (
   } catch (err) {
     this.log.error({ err, id }, 'patch complaint failed')
     return reply.internalServerError('update complaint failed') as never
+  }
+}
+
+// 举报与反馈，记录图片
+/**
+ * 请求参数:
+ * {
+ *   "images": [
+ *     {
+ *       "original_name": "IMG_20260625_143022.jpg",
+ *       "oss_filename": "20260625_123_01.jpg",
+ *       "oss_path": "mathink/feedback/20260625_123_01.jpg"
+ *     }
+ *   ]
+ * }
+ *
+ * 成功返回（201）:
+ * {
+ *   "data": [
+ *     {
+ *       "id": 1,
+ *       "path": "mathink/feedback/20260625_123_01.jpg",
+ *       "original_name": "IMG_20260625_143022.jpg",
+ *       "filename": "20260625_123_01.jpg",
+ *       "complaint_id": 123,
+ *       "created_at": "2026-10-10T21:35:38.336Z",
+ *       "updated_at": "2026-10-10T21:35:38.336Z"
+ *     }
+ *   ]
+ * }
+ *
+ * 失败返回:
+ * {
+ *   "error": "complaint not found"
+ * }
+ */
+type ComplaintImageRow = {
+  id: number
+  path: string
+  original_name: string
+  filename: string
+  complaint_id: number
+  created_at: Date
+  updated_at: Date
+}
+
+export const PostComplaintImages = async function (
+  this: FastifyInstance,
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<{ data: ComplaintImageRow[] } | never> {
+  const id = parseComplaintId((request.params as ComplaintParams).id)
+  if (id == null) {
+    return reply.badRequest('id must be a positive integer') as never
+  }
+
+  const { images } = request.body as PostComplaintImagesBody
+
+  try {
+    const userId = await resolveUserId(this, request)
+    if (userId == null) {
+      return reply.unauthorized('user not found') as never
+    }
+
+    // 只允许给本人的投诉追加图片
+    const existedComplaint = await this.prisma.complaint.findFirst({
+      where: { id, uid: userId }
+    })
+    if (existedComplaint == null) {
+      return reply.notFound('complaint not found') as never
+    }
+
+    const now = prismaLocalNow()
+    await this.prisma.complaintImage.createMany({
+      data: images.map((image) => ({
+        complaint_id: id,
+        path: image.oss_path.trim(),
+        original_name: image.original_name.trim(),
+        filename: image.oss_filename.trim(),
+        created_at: now,
+        updated_at: now
+      }))
+    })
+
+    const rows = await this.prisma.complaintImage.findMany({
+      where: { complaint_id: id },
+      orderBy: { id: 'asc' }
+    })
+
+    reply.code(201)
+    return { data: rows }
+  } catch (err) {
+    this.log.error({ err, id }, 'save complaint images failed')
+    return reply.internalServerError('save complaint images failed') as never
   }
 }

@@ -4,12 +4,15 @@ import {
   PostComplaint,
   PutComplaint,
   PatchComplaint,
+  PostComplaintImages,
   type PostComplaintBody,
   type PutComplaintBody,
   type PatchComplaintBody,
+  type PostComplaintImagesBody,
   postComplaintBodySchema,
   putComplaintBodySchema,
-  patchComplaintBodySchema
+  patchComplaintBodySchema,
+  postComplaintImagesBodySchema
 } from './complaintViews'
 
 // autoload 会把目录名作为路由前缀，这里注册的路径会自动挂在 /complaint 下
@@ -47,6 +50,16 @@ const complaint: FastifyPluginAsync = async (fastify): Promise<void> => {
       schema: { body: patchComplaintBodySchema }
     },
     PatchComplaint
+  )
+
+  // 举报与反馈，记录图片
+  fastify.post<{ Body: PostComplaintImagesBody }>(
+    '/:id/images',
+    {
+      onRequest: [fastify.authenticate],
+      schema: { body: postComplaintImagesBodySchema }
+    },
+    PostComplaintImages
   )
 }
 
