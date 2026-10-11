@@ -77,3 +77,56 @@ export const GetAdminComplaints = async function (
     return reply.internalServerError('query complaint failed') as never
   }
 }
+
+export type AdminComplaintParams = {
+  id: string
+}
+
+export const adminComplaintIdParamsSchema = {
+  type: 'object',
+  required: ['id'],
+  properties: {
+    id: { type: 'string', pattern: '^[1-9]\\d*$' }
+  },
+  additionalProperties: false
+} as const
+
+type AdminComplaintImageRow = {
+  id: number
+  path: string
+  original_name: string
+  filename: string
+  complaint_id: number
+  created_at: Date
+  updated_at: Date
+}
+
+export type AdminComplaintDetailRow = AdminComplaintRow & {
+  complaintImages: AdminComplaintImageRow[]
+}
+
+// 管理员获取单条投诉详情，包含关联的投诉图片
+export const GetAdminComplaintDetail = async function (
+  this: FastifyInstance,
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<AdminComplaintDetailRow | never> {
+  // 验证角色
+  await AuthorizeByRole(this, request, [ROLE_CONTENT_ADMIN]);
+  const id = Number((request.params as AdminComplaintParams).id)
+
+  try {
+    const row = await this.prisma.complaint.findUnique({
+      where: { id },
+      include: { complaintImages: { orderBy: { id: 'asc' } } }
+    })
+    if (row == null) {
+      return reply.notFound('complaint not found') as never
+    }
+
+    return row
+  } catch (err) {
+    this.log.error({ err, id }, 'query admin complaint detail failed')
+    return reply.internalServerError('query complaint failed') as never
+  }
+}
