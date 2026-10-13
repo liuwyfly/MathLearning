@@ -158,9 +158,8 @@ test('wechat_code 换取 token 成功并返回 token 和用户信息', async (t)
   const body = JSON.parse(res.payload)
   assert.equal(typeof body.token, 'string')
   assert.ok(body.token.length > 0)
-  const decoded = app.jwt.verify(body.token) as { uid: string; openid: string; exp: number }
+  const decoded = app.jwt.verify(body.token) as { uid: string; exp: number }
   assert.equal(decoded.uid, fakeWechatUser.user.uid)
-  assert.equal(decoded.openid, wxTokenData.openid)
   assert.equal(typeof decoded.exp, 'number')
   assert.equal(body.access_token, wxTokenData.access_token)
   assert.equal(body.expires_in, wxTokenData.expires_in)

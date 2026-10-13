@@ -115,7 +115,7 @@ export async function wechatCodeHandler (
   }
 
   const token = this.jwt.sign(
-    { uid: wechatUser.user.uid, openid: wechatUser.openid },
+    { uid: wechatUser.user.uid },
     { expiresIn: process.env.JWT_EXPIRES_IN ?? '7d' }
   )
 
