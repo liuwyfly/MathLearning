@@ -1,5 +1,5 @@
 import { type FastifyInstance, FastifyRequest, type FastifyReply } from 'fastify'
-import { findOrCreateWechatUser, reqWeixinUserInfo } from './wechatUser'
+import { findOrCreateWechatUser, reqWeixinUserInfo, findDeletedUserByUid } from './wechatUser'
 
 export interface WxCodeBody {
   code: string
@@ -101,6 +101,20 @@ export async function wechatCodeHandler (
   } catch (err) {
     request.log.error({ err, ip: clientIp }, 'wechat user upsert failed')
     return reply.code(502).send({ error: 'Failed to query or create wechat user' })
+  }
+
+  // 根据 uid 查询是否存在等待处理的注销请求，有则说明用户已提交注销，暂时不能登录
+  let deletedUser
+  try {
+    deletedUser = await findDeletedUserByUid(this.prisma, wechatUser.user.uid)
+  } catch (err) {
+    request.log.error({ err, ip: clientIp }, 'query delete account request failed')
+    return reply.code(502).send({ error: 'Failed to query delete account request' })
+  }
+
+  if (deletedUser != null) {
+    this.log.info({ uid: wechatUser.user.uid }, 'user has pending delete account request, login rejected')
+    return reply.code(401).send({ error: '账号已注销，正在处理数据，暂时不能登录' })
   }
 
   // 获取用户昵称和头像（失败不阻断登录）

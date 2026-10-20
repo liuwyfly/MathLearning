@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
-import type { PrismaClient, Prisma, WeixinUser } from '../../generated/prisma-client'
+import type { PrismaClient, Prisma, WeixinUser, DeleteAccount } from '../../generated/prisma-client'
 import { prismaLocalNow } from '../../common/timeUtil'
+import { DELETE_ACCOUNT_STATUS_WAITING_FOR } from '../../common/constants'
 
 export type WechatUserWithProfile = Prisma.WeixinUserGetPayload<{ include: { user: true } }>
 
@@ -31,6 +32,16 @@ export async function findOrCreateWechatUser (
       user: { create: { uid: randomUUID().replace(/-/g, ''), createdAt: now, updatedAt: now } }
     },
     include: { user: true }
+  })
+}
+
+// 根据 uid 查询是否存在等待处理的账号注销请求，存在则返回该记录
+export async function findDeletedUserByUid (
+  prisma: PrismaClient,
+  uid: string
+): Promise<DeleteAccount | null> {
+  return prisma.deleteAccount.findFirst({
+    where: { uid, status: DELETE_ACCOUNT_STATUS_WAITING_FOR }
   })
 }
 
