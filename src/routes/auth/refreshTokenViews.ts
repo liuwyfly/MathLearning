@@ -19,5 +19,7 @@ export async function refreshTokenHandler (
     { expiresIn: process.env.JWT_EXPIRES_IN ?? '7d' }
   )
 
+  this.log.info(`Refreshed token for user ${uid} token: ${token}`)
+
   return reply.send({ token })
 }

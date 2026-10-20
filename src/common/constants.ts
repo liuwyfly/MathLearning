@@ -17,3 +17,9 @@ export const COMPLAINT_STATUS_PROCESSING = "PROCESSING";
 
 // 每人每天最多提交的投诉/反馈条数
 export const COMPLAINT_DAILY_LIMIT = 5;
+
+// 账号注销状态常量
+// 账号注销状态可选值：等待处理、处理中、已完成
+export const DELETE_ACCOUNT_STATUS_WAITING_FOR = "WAITING_FOR";
+export const DELETE_ACCOUNT_STATUS_PROCESSING = "PROCESSING";
+export const DELETE_ACCOUNT_STATUS_FINISHED = "FINISHED";
