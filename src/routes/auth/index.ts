@@ -2,7 +2,7 @@ import { type FastifyPluginAsync } from 'fastify'
 import { wechatCodeHandler, wxCodeBodySchema, type WxCodeBody } from './wechatCodeViews'
 import { refreshTokenHandler } from './refreshTokenViews'
 import { deleteAccountHandler, deleteAccountBodySchema, type DeleteAccountBody } from './deleteAccountViews'
-import { testJwtTokenHandler, TestJwtTokenBody } from './testJwtTokenViews'
+// import { testJwtTokenHandler, TestJwtTokenBody } from './testJwtTokenViews'
 
 declare module 'fastify' {
   interface FastifyInstance {
