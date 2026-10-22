@@ -114,7 +114,7 @@ export async function wechatCodeHandler (
 
   if (deletedUser != null) {
     this.log.info({ uid: wechatUser.user.uid }, 'user has pending delete account request, login rejected')
-    return reply.code(401).send({ error: '账号已注销，正在处理数据，暂时不能登录' })
+    return reply.code(200).send({ error: '账号已注销，正在处理数据，暂时不能登录' })
   }
 
   // 获取用户昵称和头像（失败不阻断登录）
