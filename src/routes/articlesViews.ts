@@ -111,6 +111,7 @@ export const GetArticleById = async function (
         this.prisma.problem.count({
             where: {
                 article_id: articleId,
+                language: language,
             },
         }),
     ]);
