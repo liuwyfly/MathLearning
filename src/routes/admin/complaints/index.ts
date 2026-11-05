@@ -2,10 +2,13 @@ import { type FastifyPluginAsync } from 'fastify'
 import {
   GetAdminComplaints,
   GetAdminComplaintDetail,
+  PostAdminComplaintReply,
   type AdminComplaintListQuery,
   type AdminComplaintParams,
+  type PostAdminComplaintReplyBody,
   adminComplaintListQuerySchema,
-  adminComplaintIdParamsSchema
+  adminComplaintIdParamsSchema,
+  postAdminComplaintReplyBodySchema
 } from './complaintViews'
 
 // autoload 会把目录名作为路由前缀，这里注册的路径会自动挂在 /admin/complaints 下
@@ -28,6 +31,16 @@ const adminComplaints: FastifyPluginAsync = async (fastify): Promise<void> => {
       schema: { params: adminComplaintIdParamsSchema }
     },
     GetAdminComplaintDetail
+  )
+
+  // 管理员回复用户投诉/反馈
+  fastify.post<{ Params: AdminComplaintParams, Body: PostAdminComplaintReplyBody }>(
+    '/:id/replies',
+    {
+      onRequest: [fastify.authenticate],
+      schema: { params: adminComplaintIdParamsSchema, body: postAdminComplaintReplyBodySchema }
+    },
+    PostAdminComplaintReply
   )
 }
 

@@ -7,6 +7,7 @@ import {
   COMPLAINT_STATUS_USER_CLOSED,
   COMPLAINT_STATUS_WAITING_FOR
 } from '../../../common/constants'
+import { prismaLocalNow } from '../../../common/timeUtil'
 
 type AdminComplaintRow = {
   id: number
@@ -103,6 +104,7 @@ type AdminComplaintImageRow = {
 
 export type AdminComplaintDetailRow = AdminComplaintRow & {
   complaintImages: AdminComplaintImageRow[]
+  complaintReplies: AdminComplaintReplyRow[]
 }
 
 // 管理员获取单条投诉详情，包含关联的投诉图片
@@ -118,7 +120,10 @@ export const GetAdminComplaintDetail = async function (
   try {
     const row = await this.prisma.complaint.findUnique({
       where: { id },
-      include: { complaintImages: { orderBy: { id: 'asc' } } }
+      include: {
+        complaintImages: { orderBy: { id: 'asc' } },
+        complaintReplies: { orderBy: { id: 'asc' } }
+      }
     })
     if (row == null) {
       return reply.notFound('complaint not found') as never
@@ -128,5 +133,108 @@ export const GetAdminComplaintDetail = async function (
   } catch (err) {
     this.log.error({ err, id }, 'query admin complaint detail failed')
     return reply.internalServerError('query complaint failed') as never
+  }
+}
+
+export type PostAdminComplaintReplyBody = {
+  content: string
+}
+
+export const postAdminComplaintReplyBodySchema = {
+  type: 'object',
+  required: ['content'],
+  properties: {
+    content: {
+      type: 'string',
+      minLength: 1,
+      errorMessage: { minLength: '回复内容不能为空' }
+    }
+  },
+  additionalProperties: false
+} as const
+
+type AdminComplaintReplyRow = {
+  id: number
+  complaint_id: number
+  content: string
+  admin_uid: string
+  created_at: Date
+  updated_at: Date
+}
+
+// 管理员回复投诉/反馈：写入回复记录，并把投诉状态更新为 REPLIED
+/**
+ * 请求参数:
+ * {
+ *   "content": "您好，第3题答案已核对并修正，感谢反馈。"
+ * }
+ *
+ * 成功返回（201）:
+ * {
+ *   "id": 1,
+ *   "complaint_id": 123,
+ *   "content": "您好，第3题答案已核对并修正，感谢反馈。",
+ *   "admin_uid": "420a8fc872644180b78ef1347a2c633c",
+ *   "created_at": "2026-11-01T09:35:38.336Z",
+ *   "updated_at": "2026-11-01T09:35:38.336Z"
+ * }
+ *
+ * 失败返回:
+ * {
+ *   "error": "complaint not found"
+ * }
+ */
+export const PostAdminComplaintReply = async function (
+  this: FastifyInstance,
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<AdminComplaintReplyRow | never> {
+  // 验证角色
+  await AuthorizeByRole(this, request, [ROLE_CONTENT_ADMIN]);
+
+  const id = Number((request.params as AdminComplaintParams).id)
+  const { content } = request.body as PostAdminComplaintReplyBody
+  if (typeof content !== 'string' || content.trim() === '') {
+    return reply.badRequest('content is required') as never
+  }
+
+  const adminUid = (request.user as Record<string, unknown> | undefined)?.uid
+  if (typeof adminUid !== 'string' || adminUid.trim() === '') {
+    return reply.unauthorized('admin user not found') as never
+  }
+
+  try {
+    const existedComplaint = await this.prisma.complaint.findUnique({
+      where: { id }
+    })
+    if (existedComplaint == null) {
+      return reply.notFound('complaint not found') as never
+    }
+
+    const now = prismaLocalNow()
+    const createdRow = await this.prisma.complaintReply.create({
+      data: {
+        complaint_id: id,
+        content: content.trim(),
+        admin_uid: adminUid,
+        created_at: now,
+        updated_at: now
+      }
+    })
+
+    // 回复后把投诉状态置为已回复
+    await this.prisma.complaint.update({
+      where: { id },
+      data: {
+        status: COMPLAINT_STATUS_REPLIED,
+        updated_at: now
+      }
+    })
+
+    reply.code(201)
+    return createdRow
+  } catch (err) {
+    this.log.error({ err, id }, 'create complaint reply failed')
+    return reply.internalServerError('create complaint reply failed') as never
   }
 }

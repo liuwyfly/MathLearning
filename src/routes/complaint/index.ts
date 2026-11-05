@@ -1,6 +1,7 @@
 import { type FastifyPluginAsync } from 'fastify'
 import {
   GetComplaints,
+  GetComplaintDetail,
   PostComplaint,
   PutComplaint,
   PatchComplaint,
@@ -19,6 +20,9 @@ import {
 const complaint: FastifyPluginAsync = async (fastify): Promise<void> => {
   // 获取当前用户的投诉列表
   fastify.get('/', { onRequest: [fastify.authenticate] }, GetComplaints)
+
+  // 获取当前用户的单条投诉详情（含截图与客服回复）
+  fastify.get('/:id', { onRequest: [fastify.authenticate] }, GetComplaintDetail)
 
   // 新建投诉
   fastify.post<{ Body: PostComplaintBody }>(

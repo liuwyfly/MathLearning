@@ -2,7 +2,6 @@ import { type FastifyPluginAsync } from 'fastify'
 import { wechatCodeHandler, wxCodeBodySchema, type WxCodeBody } from './wechatCodeViews'
 import { refreshTokenHandler } from './refreshTokenViews'
 import { deleteAccountHandler, deleteAccountBodySchema, type DeleteAccountBody } from './deleteAccountViews'
-// import { testJwtTokenHandler, TestJwtTokenBody } from './testJwtTokenViews'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -26,9 +25,6 @@ const auth: FastifyPluginAsync = async (fastify): Promise<void> => {
     onRequest: [fastify.authenticate],
     schema: { body: deleteAccountBodySchema }
   }, deleteAccountHandler)
-
-  // 测试接口，生成 token
-  // fastify.post<{ Body: TestJwtTokenBody }>('/test_jwt_token', testJwtTokenHandler)
 }
 
 export default auth

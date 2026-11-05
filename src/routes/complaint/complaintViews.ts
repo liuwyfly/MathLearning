@@ -1,10 +1,12 @@
 import { type FastifyReply, type FastifyRequest, type FastifyInstance } from 'fastify'
 import { COMPLAINT_DAILY_LIMIT, COMPLAINT_STATUS_PROCESSING, COMPLAINT_STATUS_WAITING_FOR } from '../../common/constants'
+import { pagination } from '../../common/pagination'
 import { prismaLocalNow } from '../../common/timeUtil'
 
 type ComplaintRow = {
   id: number
   content: string
+  status: string
   uid: string
   created_at: Date
   updated_at: Date
@@ -117,27 +119,172 @@ async function resolveUserId (_fastify: FastifyInstance, request: FastifyRequest
   return uid
 }
 
-// 获取当前用户的投诉列表
+// 列表摘要的最大长度（字符数）
+const COMPLAINT_SUMMARY_MAX_LENGTH = 100
+
+// 生成列表摘要：换行/回车/制表符等连续空白折叠为单个空格（摘要是两行内展示，换行没有排版意义），
+// 超出 100 字截断并补省略号；完整内容（含换行）由详情接口返回
+function buildComplaintSummary (content: string): { summary: string, truncated: boolean } {
+  const flattened = content.trim().replace(/\s+/g, ' ')
+  if (flattened.length <= COMPLAINT_SUMMARY_MAX_LENGTH) {
+    return { summary: flattened, truncated: false }
+  }
+  return {
+    summary: `${flattened.slice(0, COMPLAINT_SUMMARY_MAX_LENGTH)}…`,
+    truncated: true
+  }
+}
+
+// 投诉列表分页响应
+type ComplaintListResponse = {
+  data: Array<ComplaintRow & { content_truncated: boolean }>
+  total: number
+  page: number
+  page_size: number
+}
+
+// 获取当前用户的投诉列表（分页）
+// 查询参数：page（从 1 开始，默认 1）、page_size（默认 10，最大 100）
+// content 只返回前 100 字摘要（换行已折叠为空格），content_truncated 标记是否被截断，
+// 完整内容请走 GET /:id 详情接口
 export const GetComplaints = async function (
   this: FastifyInstance,
   request: FastifyRequest,
   reply: FastifyReply
-): Promise<{ data: ComplaintRow[] } | never> {
+): Promise<ComplaintListResponse | never> {
   try {
     const userId = await resolveUserId(this, request)
     if (userId == null) {
       return reply.unauthorized('user not found') as never
     }
 
-    const rows = await this.prisma.complaint.findMany({
-      where: { uid: userId },
-      orderBy: { id: 'desc' }
-    })
+    const { page: p, page_size: ps } = pagination(request)
 
-    return { data: rows }
+    const where = { uid: userId }
+    const [total, rows] = await Promise.all([
+      this.prisma.complaint.count({ where }),
+      this.prisma.complaint.findMany({
+        where,
+        orderBy: { id: 'desc' },
+        skip: (p - 1) * ps,
+        take: ps
+      })
+    ])
+
+    return {
+      data: rows.map((row) => {
+        const { summary, truncated } = buildComplaintSummary(row.content)
+        return { ...row, content: summary, content_truncated: truncated }
+      }),
+      total,
+      page: p,
+      page_size: ps
+    }
   } catch (err) {
     this.log.error({ err }, 'query complaint list failed')
     return reply.internalServerError('query complaint failed') as never
+  }
+}
+
+// 投诉详情：基础信息 + 截图列表 + 客服回复列表
+type ComplaintDetailRow = ComplaintRow & {
+  images: ComplaintImageRow[]
+  replies: ComplaintReplyRow[]
+}
+
+type ComplaintReplyRow = {
+  id: number
+  complaint_id: number
+  content: string
+  created_at: Date
+  updated_at: Date
+}
+
+// 获取当前用户的单条投诉详情（仅限本人），包含截图与客服回复
+/**
+ * 成功返回:
+ * {
+ *   "data": {
+ *     "id": 2,
+ *     "content": "我反馈一下题目第3题答案解析有误，请核对。",
+ *     "status": "REPLIED",
+ *     "uid": "420a8fc872644180b78ef1347a2c633c",
+ *     "created_at": "2026-10-08T17:35:38.336Z",
+ *     "updated_at": "2026-10-08T17:35:38.336Z",
+ *     "images": [
+ *       {
+ *         "id": 1,
+ *         "path": "mathink/feedback/20260625_123_01.jpg",
+ *         "original_name": "IMG_20260625_143022.jpg",
+ *         "filename": "20260625_123_01.jpg",
+ *         "complaint_id": 2,
+ *         "created_at": "2026-10-10T21:35:38.336Z",
+ *         "updated_at": "2026-10-10T21:35:38.336Z"
+ *       }
+ *     ],
+ *     "replies": [
+ *       {
+ *         "id": 1,
+ *         "complaint_id": 2,
+ *         "content": "已核对，第3题解析已修正。",
+ *         "created_at": "2026-10-11T09:00:00.000Z",
+ *         "updated_at": "2026-10-11T09:00:00.000Z"
+ *       }
+ *     ]
+ *   }
+ * }
+ *
+ * 失败返回:
+ * {
+ *   "error": "complaint not found"
+ * }
+ */
+export const GetComplaintDetail = async function (
+  this: FastifyInstance,
+  request: FastifyRequest,
+  reply: FastifyReply
+): Promise<{ data: ComplaintDetailRow } | never> {
+  const id = parseComplaintId((request.params as ComplaintParams).id)
+  if (id == null) {
+    return reply.badRequest('id must be a positive integer') as never
+  }
+
+  try {
+    const userId = await resolveUserId(this, request)
+    if (userId == null) {
+      return reply.unauthorized('user not found') as never
+    }
+
+    // 只允许查看本人的投诉详情
+    const complaint = await this.prisma.complaint.findFirst({
+      where: { id, uid: userId }
+    })
+    if (complaint == null) {
+      return reply.notFound('complaint not found') as never
+    }
+
+    const images = await this.prisma.complaintImage.findMany({
+      where: { complaint_id: id },
+      orderBy: { id: 'asc' }
+    })
+
+    // 客服回复按时间升序返回，不下发 admin_uid
+    const replies = await this.prisma.complaintReply.findMany({
+      where: { complaint_id: id },
+      orderBy: { id: 'asc' },
+      select: {
+        id: true,
+        complaint_id: true,
+        content: true,
+        created_at: true,
+        updated_at: true
+      }
+    })
+
+    return { data: { ...complaint, images, replies } }
+  } catch (err) {
+    this.log.error({ err, id }, 'query complaint detail failed')
+    return reply.internalServerError('query complaint detail failed') as never
   }
 }
 

@@ -16,7 +16,7 @@ function base64UrlEncode(value: string): string {
     .replace(/=+$/g, '')
 }
 
-function createMqServiceJwt(): string {
+export function createMqServiceJwt(): string {
   const uid = process.env.API_USER?.trim()
   if (!uid) {
     throw new Error('SendMqMessage: API_USER 未配置')
