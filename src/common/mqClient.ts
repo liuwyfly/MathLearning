@@ -42,16 +42,16 @@ export function createMqServiceJwt(): string {
  * 实际请求体为：{ topic, param: { ... } }
  */
 export async function SendMqMessage(
-  topic: string,
+  routingKey: string,
   param: MqParam = {},
   logger?: MqLogger
 ): Promise<Response> {
-  if (!topic || !topic.trim()) {
-    throw new Error('SendMqMessage: topic 不能为空')
+  if (!routingKey || !routingKey.trim()) {
+    throw new Error('SendMqMessage: routing_key 不能为空')
   }
 
   const jwtStr = createMqServiceJwt()
-  logger?.info({ topic, param }, 'SendMqMessage debug')
+  logger?.info({ routingKey, param }, 'SendMqMessage debug')
 
   const url = `${MQ_SERVICE_HOST.replace(/\/+$/, '')}${MQ_SEND_PATH}`
   const response = await serviceRequest(url, {
@@ -60,11 +60,18 @@ export async function SendMqMessage(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${jwtStr}`,
     },
-    body: JSON.stringify({ topic, param: param ?? {} }),
+    body: JSON.stringify({ routingKey, param: param ?? {} }),
   })
 
   if (!response.ok) {
-    throw new Error(`SendMqMessage: ht-rabbit-mq 服务响应异常 status=${response.status}`)
+    const bodyText = await response.text().catch(() => '<读取响应体失败>')
+    logger?.info(
+      { routingKey, status: response.status, body: bodyText },
+      'SendMqMessage: ht-rabbit-mq 服务响应异常'
+    )
+    throw new Error(
+      `SendMqMessage: ht-rabbit-mq 服务响应异常 status=${response.status} body=${bodyText}`
+    )
   }
 
   return response

@@ -71,7 +71,7 @@ export async function wechatCodeHandler (
 
     try {
       await this.sendMqMessage(
-        'UserTopic',
+        'User.WechatSignin',
         {
           key: 'WechatSignin',
           open_id: data.openid,
