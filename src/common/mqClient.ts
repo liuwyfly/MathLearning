@@ -60,7 +60,7 @@ export async function SendMqMessage(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${jwtStr}`,
     },
-    body: JSON.stringify({ routingKey, param: param ?? {} }),
+    body: JSON.stringify({ routing_key: routingKey, param: param ?? {} }),
   })
 
   if (!response.ok) {
