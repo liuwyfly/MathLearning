@@ -63,15 +63,17 @@ export async function SendMqMessage(
     body: JSON.stringify({ routing_key: routingKey, param: param ?? {} }),
   })
 
+  const bodyText = await response.text().catch(() => '<读取响应体失败>')
   if (!response.ok) {
-    const bodyText = await response.text().catch(() => '<读取响应体失败>')
     logger?.info(
       { routingKey, status: response.status, body: bodyText },
-      'SendMqMessage: ht-rabbit-mq 服务响应异常'
+      'SendMqMessage ht-rabbit-mq 服务响应异常'
     )
     throw new Error(
       `SendMqMessage: ht-rabbit-mq 服务响应异常 status=${response.status} body=${bodyText}`
     )
+  } else {
+    logger?.info({ routingKey, status: response.status, body: bodyText}, 'SendMqMessage ht-rabbit-mq 服务响应成功')
   }
 
   return response
