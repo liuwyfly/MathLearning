@@ -1,6 +1,7 @@
 import { type FastifyInstance, FastifyRequest, type FastifyReply } from 'fastify'
 
 import { createMqServiceJwt } from '../../common/mqClient'
+import { formatLocalDateTime } from '../../common/timeUtil'
 
 export interface testMqServiceBody {
   routing_key: string,
@@ -30,6 +31,21 @@ export async function testMqServicePost (
     )
   
     const token_test = createMqServiceJwt()
+
+    try {
+      await this.sendMqMessage(
+        'User.WechatSignin',
+        {
+          open_id: "",
+          union_id: "",
+          user_id: undefined,
+          time: formatLocalDateTime(new Date()),
+          client_ip: ""
+        }
+      )
+    } catch (mqErr) {
+      request.log.warn({ err: mqErr, ip: "" }, 'send login mq message failed')
+    }
 
   return reply.send({
     'message': 'success',
