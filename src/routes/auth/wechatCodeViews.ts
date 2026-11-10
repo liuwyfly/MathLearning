@@ -1,5 +1,6 @@
 import { type FastifyInstance, FastifyRequest, type FastifyReply } from 'fastify'
 import { findOrCreateWechatUser, reqWeixinUserInfo, findDeletedUserByUid } from './wechatUser'
+import { formatLocalDateTime } from '../../common/timeUtil'
 
 export interface WxCodeBody {
   code: string
@@ -23,13 +24,6 @@ interface WxAccessTokenResponse {
   scope?: string
   errcode?: number
   errmsg?: string
-}
-
-// 格式化为 本地时区的 "年-月-日 时:分:秒.毫秒"，如 2025-06-25 14:30:05.123
-function formatLocalDateTime (d: Date): string {
-  const pad = (n: number, len = 2): string => String(n).padStart(len, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ` +
-    `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`
 }
 
 export async function wechatCodeHandler (
@@ -73,7 +67,6 @@ export async function wechatCodeHandler (
       await this.sendMqMessage(
         'User.WechatSignin',
         {
-          key: 'WechatSignin',
           open_id: data.openid,
           union_id: data.unionid,
           user_id: undefined,
