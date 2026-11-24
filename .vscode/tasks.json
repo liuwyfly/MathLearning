@@ -1,0 +1,44 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build ts via npm",
+            "type": "shell",
+            "command": "npm run build:ts",
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "copy generated to dist",
+            "type": "shell",
+            "command": "robocopy src/generated dist/generated /E; if ($LASTEXITCODE -le 1) { exit 0 }",
+            "options": {
+                "shell": {
+                    "executable": "C:\\app\\pwsh7\\7\\pwsh.exe",
+                    "args": [
+                        "-NoLogo",
+                        "-Command"
+                    ]
+                }
+            },
+            "presentation": {
+                "reveal": "silent",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "build",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "build ts via npm",
+                "copy generated to dist"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

@@ -1,0 +1,115 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug Fastify",
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
+            "program": "${workspaceFolder}/node_modules/fastify-cli/cli.js",
+            "args": ["start", "-l", "info", "-P", "--options", "-p", "3001", "dist/app.js"],
+            "preLaunchTask": "build",
+            "outFiles": [
+                "${workspaceFolder}/dist/**/*.js"
+            ],
+            "sourceMaps": true,
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "resolveSourceMapLocations": [
+                "${workspaceFolder}/**",
+                "node_modules/@prisma/adapter-mariadb/**"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "npm test",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "test"
+            ],
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Prisma migrate dev",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "prisma",
+                "migrate",
+                "dev",
+                "--name",
+                "${input:prismaMigrationName}"
+            ],
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Prisma generate",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "prisma",
+                "generate"
+            ],
+            "cwd": "${workspaceFolder}",
+            "envFile": "${workspaceFolder}/.env",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "npm specific test",
+            "runtimeExecutable": "node",
+            "runtimeArgs": [
+                "--env-file=.env",
+                "--test",
+                "-r",
+                "ts-node/register",
+                "--test-name-pattern=${input:testNamePattern}",
+                "${input:testFile}"
+            ],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+        }
+    ],
+    "inputs": [
+        {
+            "id": "prismaMigrationName",
+            "type": "promptString",
+            "description": "Prisma migration name (example: add_contents_icon_path)",
+            "default": "add_contents_icon_path"
+        },
+        {
+            "id": "testNamePattern",
+            "type": "promptString",
+            "description": "Test name pattern (example: wechat_code 换取 token 成功并返回 token 和用户信息)",
+            "default": "wechat_code 换取 token 成功并返回 token 和用户信息"
+        },
+        {
+            "id": "testFile",
+            "type": "promptString",
+            "description": "Test file path (example: test/routes/auth.test.ts)",
+            "default": "test/routes/auth.test.ts"
+        }
+    ]
+}
