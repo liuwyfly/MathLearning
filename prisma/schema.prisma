@@ -179,3 +179,14 @@ model DeleteAccount {
   @@index([uid], map: "idx_delete_account_uid")
   @@map("mathlearning_delete_account")
 }
+
+// 文章关联的图片表
+model ArticleImage {
+  id         Int      @id @default(autoincrement()) @db.UnsignedInt
+  path       String   @db.VarChar(352)
+  article_id Int      @db.UnsignedInt
+  created_at DateTime @default(now()) @db.DateTime(3)
+
+  @@index([article_id], map: "idx_article_image_article_id")
+  @@map("mathlearning_article_image")
+}

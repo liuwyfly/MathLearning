@@ -60,13 +60,19 @@ const getPrismaClient = async (): Promise<PrismaClient> => {
     }
 
     prismaInitialization = (async () => {
-        const databaseUrl = process.env.DATABASE_URL;
-        if (!databaseUrl) {
+        const mysqlHost = process.env.MYSQL_HOST;
+        const mysqlUser = process.env.MYSQL_USER;
+        const mysqlPassword = process.env.MYSQL_PASSWORD;
+        const mysqlDatabase = process.env.MYSQL_DATABASE;
+
+        if (!mysqlHost || !mysqlUser || !mysqlPassword || !mysqlDatabase) {
             throw new Error(
-                "DATABASE_URL is required to initialize Prisma adapter",
+                "MYSQL_HOST, MYSQL_USER, MYSQL_PASSWORD and MYSQL_DATABASE are required to initialize Prisma adapter",
             );
         }
 
+        const mysqlPort = toPositiveInt(process.env.MYSQL_PORT ?? "3306", 3306);
+        const databaseUrl = `mysql://${encodeURIComponent(mysqlUser)}:${encodeURIComponent(mysqlPassword)}@${mysqlHost}:${mysqlPort}/${encodeURIComponent(mysqlDatabase)}?connection_limit=2&pool_timeout=30&connect_timeout=10`;
         const database = new URL(databaseUrl);
         const connectionLimit = toPositiveInt(
             process.env.PRISMA_CONNECTION_LIMIT ??
@@ -98,7 +104,7 @@ const getPrismaClient = async (): Promise<PrismaClient> => {
             port: database.port ? toPositiveInt(database.port, 3306) : 3306,
             user: decodeURIComponent(database.username),
             password: decodeURIComponent(database.password),
-            database: database.pathname.replace(/^\//, ""),
+            database: decodeURIComponent(database.pathname.replace(/^\//, "")),
             connectionLimit,
             acquireTimeout: acquireTimeoutMs,
             idleTimeout: idleTimeoutSeconds,
