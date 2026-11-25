@@ -352,3 +352,71 @@ export const DeleteArticle = async function (
         message: "Article deleted successfully",
     });
 };
+
+export const GetArticleImages = async function (
+    this: FastifyInstance,
+    request: FastifyRequest,
+    reply: FastifyReply,
+): Promise<{ success: boolean; data: any } | never> {
+    const { article_id } =
+        (request.query as { article_id?: string | number } | undefined) ?? {};
+
+    if (article_id === undefined || article_id === null || article_id === "") {
+        return reply.status(400).send({
+            success: false,
+            message: "article_id is required",
+        }) as never;
+    }
+
+    const articleId = Number(article_id);
+    if (!Number.isInteger(articleId) || articleId <= 0) {
+        return reply.status(400).send({
+            success: false,
+            message: "Invalid article_id",
+        }) as never;
+    }
+
+    const rows = await this.prisma.$queryRaw<
+        { id: number | bigint; title: string; title_en: string | null; oss_path: string | null }[]
+    >`
+        SELECT a.id, a.title, a.title_en, c.oss_path
+        FROM \`mathlearning_article\` a
+        JOIN mathlearning_contents_articles ca ON ca.article_id = a.id
+        JOIN mathlearning_contents c ON c.id = ca.contents_id
+        WHERE a.id = ${articleId}
+    `;
+
+    const row = rows[0];
+
+    if (!row) {
+        return reply.status(404).send({
+            success: false,
+            message: "Article not found",
+        }) as never;
+    }
+
+    const article = {
+        id: Number(row.id),
+        title: row.title,
+        title_en: row.title_en,
+        oss_path: row.oss_path
+            ? `${row.oss_path.replace(/\/+$/, "")}/images`
+            : null,
+    };
+
+    const articleImages = await this.prisma.articleImage.findMany({
+        where: { article_id: articleId },
+        orderBy: { id: "desc" },
+        select: {
+            path: true,
+        },
+    });
+
+    return reply.send({
+        success: true,
+        data: {
+            article,
+            ArticleImage: articleImages,
+        },
+    });
+};

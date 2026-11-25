@@ -14,6 +14,7 @@ import {
     postArticleBodySchema,
     putArticleBodySchema,
     ArticleDetailSchema,
+    GetArticleImages,
 } from "./articlesViews";
 import { PostMarkdown, GetMarkdownList, DeleteMarkdown } from "./markdownViews";
 import {
@@ -172,6 +173,9 @@ const articles: FastifyPluginAsync = async (fastify): Promise<void> => {
         },
         DeleteProblemImage,
     );
+
+    // 根据 article_id 获取文章图片
+    fastify.get("/article_images/detail", { onRequest: [fastify.authenticate] }, GetArticleImages)
 };
 
 export default articles;
