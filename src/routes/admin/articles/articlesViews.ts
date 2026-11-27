@@ -498,9 +498,8 @@ export const PostArticleImage = async function (
         return reply.send({ success: true, data: existing });
     }
 
-    const name = (path.split("/").pop() ?? "").slice(0, 255);
     const created = await this.prisma.articleImage.create({
-        data: { article_id: articleId, path, name },
+        data: { article_id: articleId, path },
         select: { id: true, path: true },
     });
 
