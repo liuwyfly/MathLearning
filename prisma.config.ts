@@ -22,7 +22,7 @@ const buildShadowDatabaseUrl = (): string | undefined => {
   const host = process.env.MYSQL_HOST;
   const user = process.env.MYSQL_USER;
   const password = process.env.MYSQL_PASSWORD;
-  const database = process.env.MYSQL_DATABASE;
+  const database = process.env.SHADOW_MYSQL_DATABASE;
 
   if (!host || !user || !password || !database) {
     return undefined;

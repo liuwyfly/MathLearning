@@ -416,7 +416,93 @@ export const GetArticleImages = async function (
         success: true,
         data: {
             article,
-            ArticleImage: articleImages,
+            "article_images": articleImages,
         },
     });
+};
+
+/**
+ * 参数:
+ * article_id: 文章id
+ * path: oss object key, 图片路径 + 文件名
+ */
+export const postArticleImageBodySchema = {
+    type: "object" as const,
+    required: ["article_id", "path"],
+    properties: {
+        article_id: { type: "integer" as const, minimum: 1 },
+        path: { type: "string" as const, minLength: 1, maxLength: 352 },
+    },
+    additionalProperties: false as const,
+};
+
+export type PostArticleImageBody = {
+    article_id: number;
+    path: string;
+};
+
+export const PostArticleImage = async function (
+    this: FastifyInstance,
+    request: FastifyRequest<{ Body: PostArticleImageBody }>,
+    reply: FastifyReply,
+): Promise<{ success: boolean; data?: { id: number; path: string } } | never> {
+    await AuthorizeByRole(this, request, [ROLE_CONTENT_ADMIN]);
+
+    const articleId = Number(request.body.article_id);
+    const path = typeof request.body.path === "string"
+        ? request.body.path.trim().replace(/^\/+/, "")
+        : "";
+
+    if (!Number.isInteger(articleId) || articleId <= 0) {
+        return reply.badRequest("invalid article_id") as never;
+    }
+    if (
+        path === "" ||
+        path.includes("..") ||
+        path.includes("\\") ||
+        path.length > 352
+    ) {
+        return reply.badRequest("invalid path") as never;
+    }
+
+    const rows = await this.prisma.$queryRaw<{ oss_path: string | null }[]>`
+        SELECT c.oss_path
+        FROM \`mathlearning_article\` a
+        JOIN mathlearning_contents_articles ca ON ca.article_id = a.id
+        JOIN mathlearning_contents c ON c.id = ca.contents_id
+        WHERE a.id = ${articleId}
+        ORDER BY ca.id ASC
+        LIMIT 1
+    `;
+
+    if (rows.length === 0) {
+        return reply.notFound("article not found") as never;
+    }
+
+    const basePath = (rows[0].oss_path ?? "")
+        .trim()
+        .replace(/^\/+/, "")
+        .replace(/\/+$/, "");
+    const prefix = basePath === "" ? `article-images/${articleId}` : `${basePath}/images`;
+
+    if (!path.startsWith(`${prefix}/`)) {
+        return reply.badRequest("path is not under article image prefix") as never;
+    }
+
+    const existing = await this.prisma.articleImage.findFirst({
+        where: { article_id: articleId, path },
+        select: { id: true, path: true },
+    });
+
+    if (existing != null) {
+        return reply.send({ success: true, data: existing });
+    }
+
+    const name = (path.split("/").pop() ?? "").slice(0, 255);
+    const created = await this.prisma.articleImage.create({
+        data: { article_id: articleId, path, name },
+        select: { id: true, path: true },
+    });
+
+    return reply.send({ success: true, data: created });
 };

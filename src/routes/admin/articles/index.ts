@@ -15,6 +15,9 @@ import {
     putArticleBodySchema,
     ArticleDetailSchema,
     GetArticleImages,
+    PostArticleImage,
+    postArticleImageBodySchema,
+    type PostArticleImageBody,
 } from "./articlesViews";
 import { PostMarkdown, GetMarkdownList, DeleteMarkdown } from "./markdownViews";
 import {
@@ -176,6 +179,16 @@ const articles: FastifyPluginAsync = async (fastify): Promise<void> => {
 
     // 根据 article_id 获取文章图片
     fastify.get("/article_images/detail", { onRequest: [fastify.authenticate] }, GetArticleImages)
+
+    // 上传完成后登记文章图片
+    fastify.post<{ Body: PostArticleImageBody }>(
+        "/article_image",
+        {
+            onRequest: [fastify.authenticate],
+            schema: { body: postArticleImageBodySchema },
+        },
+        PostArticleImage,
+    );
 };
 
 export default articles;
